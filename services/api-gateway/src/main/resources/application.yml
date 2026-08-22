@@ -14,6 +14,12 @@ spring:
           predicates:
             - Path=/api/v1/auth/**
 
+        # User Service Route (Protected User Profiles)
+        - id: user-service-route
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/v1/users/**
+
         # Temporary Verification Route (Lesson 3 / Lesson 6 Verification Stub)
         - id: temporary-demo-route
           uri: http://localhost:8081

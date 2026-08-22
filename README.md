@@ -8,7 +8,10 @@ DevSphere is a developer career and productivity platform designed to help devel
 
 🚧 **Under Active Development**
 
-DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 6** are complete. The **API Gateway** (`services/api-gateway`) acts as the perimeter security boundary enforcing reactive JWT validation (`HS256`) on protected routes while forwarding public registration (`POST /api/v1/auth/register`) and login (`POST /api/v1/auth/login`) requests to **Auth Service** (`services/auth-service`).
+DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 7** are complete:
+- **API Gateway** (`services/api-gateway`, Port `8080`): Reactive API Gateway enforcing JWT validation (`HS256`) and forwarding trusted user identity (`X-Authenticated-User-Id`).
+- **Auth Service** (`services/auth-service`, Port `8081`): Authentication microservice owning user credentials (`devsphere_auth` database), BCrypt hashing, registration, and JWT issuance.
+- **User Service** (`services/user-service`, Port `8082`): Real domain microservice owning user profiles (`devsphere_user` database) with Flyway migrations, profile retrieval, lazy profile initialization, and updates.
 
 ---
 
@@ -130,8 +133,8 @@ DevSphere/
 - **Lesson 3**: Spring Cloud Gateway & Request Routing Foundation *(Completed)*
 - **Lesson 4**: Auth Service Foundation & User Registration *(Completed)*
 - **Lesson 5**: JWT Authentication & Login *(Completed)*
-- **Lesson 6**: API Gateway JWT Validation & Protected Routes *(Current)*
-- **Lesson 7**: Core Domain Services & Data Persistence *(Upcoming)*
+- **Lesson 6**: API Gateway JWT Validation & Protected Routes *(Completed)*
+- **Lesson 7**: User Service & Profile Management *(Completed)*
 - **Lesson 8**: Event-Driven Integration & Messaging *(Upcoming)*
 - **Lesson 9**: Frontend Core SPA Setup & Gateway Integration *(Upcoming)*
 - **Lesson 10**: Observability, Monitoring & Production Deployment *(Upcoming)*

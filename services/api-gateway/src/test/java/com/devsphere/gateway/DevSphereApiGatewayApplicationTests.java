@@ -141,4 +141,28 @@ class DevSphereApiGatewayApplicationTests {
                 .jsonPath("$.service").isEqualTo("temporary-demo-service")
                 .jsonPath("$.message").isEqualTo("Authenticated request successfully reached downstream service");
     }
+
+    @Test
+    @DisplayName("Protected User Service endpoint /api/v1/users/me without token returns 401 Unauthorized")
+    void userServiceEndpointWithoutTokenReturns401() {
+        webTestClient.get()
+                .uri("/api/v1/users/me")
+                .exchange()
+                .expectStatus().isUnauthorized()
+                .expectBody()
+                .jsonPath("$.code").isEqualTo("UNAUTHORIZED")
+                .jsonPath("$.message").isEqualTo("Authentication is required");
+    }
+
+    @Test
+    @DisplayName("Protected User Service endpoint /api/v1/users/me with spoofed header but no valid JWT returns 401 Unauthorized")
+    void userServiceEndpointWithSpoofedHeaderWithoutJwtReturns401() {
+        webTestClient.get()
+                .uri("/api/v1/users/me")
+                .header("X-Authenticated-User-Id", "999")
+                .exchange()
+                .expectStatus().isUnauthorized()
+                .expectBody()
+                .jsonPath("$.code").isEqualTo("UNAUTHORIZED");
+    }
 }
