@@ -8,11 +8,38 @@ DevSphere is a developer career and productivity platform designed to help devel
 
 🚧 **Under Active Development**
 
-DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 8** are complete:
+DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 9** are complete:
 - **API Gateway** (`services/api-gateway`, Port `8080`): Perimeter Gateway enforcing JWT validation (`HS256`) and identity header propagation (`X-Authenticated-User-Id`).
 - **Auth Service** (`services/auth-service`, Port `8081`): Authentication microservice owning user credentials (`devsphere_auth`), registration, password hashing, and publishing `UserRegisteredEvent` domain events to Apache Kafka.
-- **User Service** (`services/user-service`, Port `8082`): User profile domain microservice (`devsphere_user`), consuming `UserRegisteredEvent` from Kafka (`devsphere.user.v1`) to initialize user profiles asynchronously and idempotently.
+- **User Service** (`services/user-service`, Port `8082`): User profile domain microservice (`devsphere_user`), consuming `UserRegisteredEvent` from Kafka (`devsphere.user.v1`) to initialize user profiles asynchronously and idempotently. Features Redis distributed caching (`user-profile:{userId}`) using the cache-aside pattern for high-performance profile reads with MySQL as the source of truth.
 - **Apache Kafka**: Message broker enabling decoupled, eventual-consistent asynchronous communication between microservices.
+- **Redis**: Distributed cache store providing high-performance, demand-driven caching for `User Service` profile reads.
+
+---
+
+## Architecture Diagram
+
+```
+                 ┌──────────────┐
+                 │ API Gateway  │ (Port 8080 - Perimeter JWT Validation)
+                 └──────┬───────┘
+                        │
+         ┌──────────────┴──────────────┐
+         │ /api/v1/auth/**             │ /api/v1/users/**
+         ▼                             ▼
+  ┌──────────────┐             ┌──────────────┐   Cache-Aside   ┌──────────────┐
+  │ Auth Service │             │ User Service ├────────────────►│    Redis     │
+  └──────┬───────┘             └──────┬───────┘                 └──────────────┘
+         │                            │
+   UserRegisteredEvent                │
+         │                            ▼
+         ▼                      MySQL Database
+   ┌───────────┐               (devsphere_user)
+   │   Kafka   │
+   └─────┬─────┘
+         │ (Consumer Group: devsphere-user-service)
+         └────────────────────────────┘
+```
 
 ---
 
@@ -22,108 +49,16 @@ DevSphere is envisioned as a production-grade multi-user SaaS platform built for
 
 ---
 
-## Planned Features
-
-- **Authentication & User Isolation**: Secure multi-user access with identity-isolated data access.
-- **Task Management**: Production-style task creation, prioritization, and tracking.
-- **Daily Planning**: Day planning and productivity scheduling.
-- **Goal Tracking**: Long-term career and skill milestone tracking.
-- **DSA / Coding Progress Tracking**: Practice problem logging, topic breakdown, and revision cycles.
-- **Learning Management**: Course, book, and article study tracking.
-- **Personal Project Management**: Ideas, roadmap milestones, and repository linkages.
-- **Internship & Job Application Tracking**: Pipeline management for applications, interview stages, and offers.
-- **Professional Profile & Resume Management**: Structured resume data management and exportable profile details.
-- **Notification Engine**: System and user notification alerts.
-- **Productivity & Career Analytics**: Visual metrics on coding progress, task completion, and application success.
-
----
-
-## Planned Architecture
-
-DevSphere will transition into a modern microservices architecture consisting of service-owned databases, explicit API contracts, and event-driven communication where appropriate:
-
-- **API Gateway**: Single entry point for routing, authentication verification, and rate limiting.
-- **Auth Service**: Identity management, authentication, and token issuance.
-- **User Service**: User profiles and user settings management.
-- **Task Service**: Task lifecycle, categories, and planning state.
-- **Learning Service**: Educational resources, courses, and DSA practice tracking.
-- **Career Service**: Job applications, internship tracking, and resume data.
-- **Project Service**: Personal project roadmaps and tracking.
-- **Notification Service**: Asynchronous notifications dispatched via messaging queues.
-- **Analytics Service**: Event-driven productivity and progress metrics calculation.
-
----
-
 ## Technology Stack
 
-> **Note**: The technologies listed below represent the *planned* stack for DevSphere. They are not yet installed or configured in this initial lesson.
-
-### Backend (Planned)
-- **Language & Core Framework**: Java 21, Spring Boot
-- **Distributed System Infrastructure**: Spring Cloud (Service Discovery, Gateway, Configuration Management)
-- **Security & Identity**: Spring Security, JWT (JSON Web Tokens)
-- **Persistence & ORM**: Spring Data JPA, Hibernate, MySQL
+### Backend
+- **Language & Core Framework**: Java 21, Spring Boot 3.2.5
+- **Gateway & Routing**: Spring Cloud Gateway 4.1.2
+- **Security & Identity**: Spring Security, JJWT (JWT generation & validation)
+- **Persistence & Migration**: Spring Data JPA, Hibernate, Flyway, MySQL
+- **Event-Driven Messaging**: Spring Kafka, Apache Kafka
+- **Distributed Caching**: Spring Data Redis, Redis 7.2
 - **Build Tool**: Maven
-- **DTO Mapping & Validation**: MapStruct, Bean Validation (JSR 380)
-- **API Documentation**: OpenAPI / Swagger
-- **Testing**: JUnit 5, Mockito
-
-### Distributed Systems & Infrastructure (Planned)
-- **API Gateway**: Spring Cloud Gateway
-- **Message Broker**: Apache Kafka (for asynchronous event-driven workflows)
-- **Caching & In-Memory Storage**: Redis (when genuinely required for caching or rate-limiting)
-- **Containerization**: Docker, Docker Compose
-- **Observability**: Prometheus, Grafana, Distributed Tracing (Micrometer Tracing / Zipkin)
-- **CI/CD**: GitHub Actions
-
-### Frontend (Planned)
-- **Framework & Language**: React, TypeScript
-- **Build Tooling**: Vite
-- **Routing**: React Router
-- **HTTP Client**: Axios
-- **Styling**: Tailwind CSS
-
----
-
-## Repository Structure
-
-```
-DevSphere/
-│
-├── services/               # Microservices (Auth, Task, Learning, Career, etc.)
-│   └── .gitkeep
-│
-├── frontend/               # React + TypeScript single-page application
-│   └── .gitkeep
-│
-├── infrastructure/         # Infrastructure configurations
-│   ├── docker/             # Docker Compose & container files
-│   ├── monitoring/         # Observability configs (Prometheus, Grafana)
-│   └── deployment/         # CI/CD & deployment configurations
-│
-├── docs/                   # Documentation
-│   ├── architecture/       # Architectural diagrams & design docs
-│   ├── api/                # OpenAPI specs & API contracts
-│   ├── database/           # Schema design & ER diagrams
-│   └── decisions/          # Architecture Decision Records (ADRs)
-│
-├── .github/                # GitHub configurations & Workflows
-│   └── workflows/
-│
-├── .gitignore              # Multi-stack gitignore
-├── README.md               # Project overview
-└── LICENSE                 # Open-source license (MIT)
-```
-
----
-
-## Development Philosophy
-
-1. **Incremental Evolution**: Built step-by-step with clear lesson boundaries.
-2. **Production-Grade Quality**: Strict coding standards, explicit domain boundaries, and zero throwaway patterns.
-3. **No Fake Functionality**: Features are implemented with real backend logic and persistence—never mock placeholders.
-4. **Architectural Justification**: Microservices, Kafka, Redis, and infrastructure are introduced only when real domain requirements dictate them.
-5. **Verified Milestones**: Every lesson leaves the repository in a fully working, tested, and validated state before moving forward.
 
 ---
 
@@ -137,14 +72,8 @@ DevSphere/
 - **Lesson 6**: API Gateway JWT Validation & Protected Routes *(Completed)*
 - **Lesson 7**: User Service & Profile Management *(Completed)*
 - **Lesson 8**: Event-Driven User Registration with Apache Kafka *(Completed)*
-- **Lesson 9**: Frontend Core SPA Setup & Gateway Integration *(Upcoming)*
-- **Lesson 10**: Observability, Monitoring & Production Deployment *(Upcoming)*
-
----
-
-## Future Deployment
-
-The target deployment strategy will leverage containerized microservices running behind an API Gateway, with continuous integration and delivery (CI/CD) pipelines validating code builds, automated tests, and Docker images before deployment to a cloud environment.
+- **Lesson 9**: Redis Distributed Caching for User Profiles *(Completed)*
+- **Lesson 10**: Transactional Outbox Pattern & Reliable Eventing *(Upcoming)*
 
 ---
 

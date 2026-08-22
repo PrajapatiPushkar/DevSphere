@@ -35,6 +35,18 @@ spring:
         spring.json.use.type.headers: false
         spring.json.value.default.type: com.devsphere.user.event.UserRegisteredEvent
 
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      repositories:
+        enabled: false
+
+app:
+  cache:
+    user-profile-ttl: 5m
+
 management:
   endpoints:
     web:
@@ -43,3 +55,6 @@ management:
   endpoint:
     health:
       show-details: always
+  health:
+    redis:
+      enabled: false

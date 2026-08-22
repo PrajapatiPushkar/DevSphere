@@ -39,8 +39,16 @@ spring:
         spring.json.use.type.headers: false
         spring.json.value.default.type: com.devsphere.user.event.UserRegisteredEvent
 
+  data:
+    redis:
+      repositories:
+        enabled: false
+
 management:
   endpoints:
     web:
       exposure:
         include: health
+  health:
+    redis:
+      enabled: false

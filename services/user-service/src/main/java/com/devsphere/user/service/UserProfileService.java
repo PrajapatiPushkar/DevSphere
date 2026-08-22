@@ -1,9 +1,11 @@
 package com.devsphere.user.service;
 
+import com.devsphere.user.cache.UserProfileCache;
 import com.devsphere.user.dto.UpdateUserProfileRequest;
 import com.devsphere.user.dto.UserProfileResponse;
 import com.devsphere.user.entity.UserProfile;
 import com.devsphere.user.repository.UserProfileRepository;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -15,9 +17,11 @@ public class UserProfileService {
     private static final Logger log = LoggerFactory.getLogger(UserProfileService.class);
 
     private final UserProfileRepository userProfileRepository;
+    private final UserProfileCache userProfileCache;
 
-    public UserProfileService(UserProfileRepository userProfileRepository) {
+    public UserProfileService(UserProfileRepository userProfileRepository, UserProfileCache userProfileCache) {
         this.userProfileRepository = userProfileRepository;
+        this.userProfileCache = userProfileCache;
     }
 
     @Transactional
@@ -28,6 +32,11 @@ public class UserProfileService {
 
         log.info("User profile requested for userId: {}", userId);
 
+        Optional<UserProfileResponse> cached = userProfileCache.get(userId);
+        if (cached.isPresent()) {
+            return cached.get();
+        }
+
         UserProfile profile = userProfileRepository.findByUserId(userId)
                 .orElseGet(() -> {
                     log.info("User profile lazily created for userId: {}", userId);
@@ -35,7 +44,10 @@ public class UserProfileService {
                     return userProfileRepository.save(newProfile);
                 });
 
-        return mapToResponse(profile);
+        UserProfileResponse response = mapToResponse(profile);
+        userProfileCache.put(userId, response);
+
+        return response;
     }
 
     @Transactional
@@ -59,9 +71,12 @@ public class UserProfileService {
         profile.setPhoneNumber(request.getPhoneNumber());
 
         UserProfile savedProfile = userProfileRepository.save(profile);
-        log.info("User profile updated successfully for userId: {}", userId);
+        log.info("User profile updated successfully in database for userId: {}", userId);
 
-        return mapToResponse(savedProfile);
+        UserProfileResponse response = mapToResponse(savedProfile);
+        userProfileCache.evict(userId);
+
+        return response;
     }
 
     private UserProfileResponse mapToResponse(UserProfile entity) {
