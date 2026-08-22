@@ -8,7 +8,7 @@ DevSphere is a developer career and productivity platform designed to help devel
 
 🚧 **Under Active Development**
 
-DevSphere is currently in its foundational stage (**Lesson 1: Production Repository Foundation**). The architecture and codebase will evolve incrementally, lesson by lesson, into a production-grade microservices platform. No business features or runtime services have been initialized yet.
+DevSphere is currently progressing through its incremental milestone lessons. **Lesson 1 (Production Repository Foundation)** is complete, and the **API Gateway foundation service** (`services/api-gateway`) has been initialized (**Lesson 2**). Note that actual Gateway routing and service discovery are not implemented yet and will be introduced in subsequent lessons.
 
 ---
 
@@ -125,8 +125,8 @@ DevSphere/
 
 ## Development Roadmap
 
-- **Lesson 1**: Production Repository Foundation *(Current)*
-- **Lesson 2**: Initial Microservice Architecture & API Gateway Setup *(Upcoming)*
+- **Lesson 1**: Production Repository Foundation *(Completed)*
+- **Lesson 2**: API Gateway Foundation Service *(Current)*
 - **Lesson 3**: Identity & Authentication Service Implementation *(Upcoming)*
 - **Lesson 4**: Core Domain Services & Data Persistence *(Upcoming)*
 - **Lesson 5**: Event-Driven Integration & Messaging *(Upcoming)*
