@@ -1,12 +1,40 @@
 package com.devsphere.gateway;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.web.reactive.server.WebTestClient;
 
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureWebTestClient
 class DevSphereApiGatewayApplicationTests {
+
+    @Autowired
+    private WebTestClient webTestClient;
 
     @Test
     void contextLoads() {
+    }
+
+    @Test
+    void healthEndpointReturnsStatusUp() {
+        webTestClient.get()
+                .uri("/actuator/health")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.status").isEqualTo("UP");
+    }
+
+    @Test
+    void gatewayRoutesToTemporaryDemoStub() {
+        webTestClient.get()
+                .uri("/api/demo/hello")
+                .exchange()
+                .expectStatus().isOk()
+                .expectBody()
+                .jsonPath("$.service").isEqualTo("temporary-demo-service")
+                .jsonPath("$.message").isEqualTo("Request successfully routed through DevSphere API Gateway");
     }
 }

@@ -8,7 +8,7 @@ The API Gateway acts as the single external gateway and reverse proxy for DevSph
 [ Frontend Client ]
         │
         ▼
-  [ API Gateway ]
+  [ API Gateway ] (Port 8080)
         │
  ┌──────┼──────────────┬──────────────┐
  ▼      ▼              ▼              ▼
@@ -17,31 +17,44 @@ The API Gateway acts as the single external gateway and reverse proxy for DevSph
 
 ---
 
-## Current Status (Lesson 2 Implementation)
+## Lesson 3 — Gateway Routing
 
-The API Gateway is currently initialized as a **Spring Boot Foundation Service**.
+Spring Cloud Gateway (reactive implementation built on Spring WebFlux and Reactor Netty) has been integrated into `services/api-gateway`.
 
-### Implemented Functionality
-- **Service Bootstrap**: Spring Boot 3.x application initialization on Java 21.
-- **Port Binding**: Runs on port `8080`.
-- **Health Endpoint**: Exposes `/actuator/health` via Spring Boot Actuator.
-- **Automated Testing**: Base application context loading verification.
+### Routing Architecture
 
-### Intentionally NOT Implemented Yet
-- ❌ **Gateway Routing**: No Spring Cloud Gateway route definitions or proxying.
-- ❌ **Authentication Integration**: No JWT validation or security filters.
-- ❌ **Rate Limiting**: No Redis or token-bucket rate limiters.
-- ❌ **Service Discovery**: No Eureka / Consul registration or dynamic routing.
-- ❌ **Load Balancing**: No client-side or server-side load balancing.
+```
+[ Client Request ] (GET http://localhost:8080/api/demo/hello)
+        │
+        ▼
+[ Spring Cloud Gateway ] (Port 8080)
+  - Predicate: Path=/api/demo/**
+  - Filter: RewritePath=/api/demo/(?<segment>.*), /internal/demo/${segment}
+        │
+        ▼
+[ Downstream Service ] (GET http://localhost:8081/internal/demo/hello)
+  └─► Lesson 3 Verification Only: Temporary Demo Stub Server (Port 8081)
+```
+
+### Key Highlights
+- **Configuration-Driven Routing**: Routes are defined declaratively in `application.yml`.
+- **Reactive Engine**: Utilizes non-blocking I/O for scalable request proxying.
+- **Temporary Verification Stub**: A lightweight local stub running on port `8081` validates gateway-to-downstream HTTP forwarding.
+- **Service Isolation**: Real business services (Auth, User, Task, Career, etc.) will replace the temporary demo route in subsequent lessons.
 
 ---
 
-## Planned Future Responsibilities
+## Current Status (Lesson 3 Implementation)
 
-As DevSphere evolves, the API Gateway will assume the following cross-cutting responsibilities:
+### Implemented Functionality
+- **Reactive Bootstrap**: Spring Boot 3.2.5 + Spring Cloud Gateway (`2023.0.1`) running on Java 21.
+- **Gateway Routing Engine**: Active routing from `/api/demo/**` to `http://localhost:8081`.
+- **Health Endpoint**: `/actuator/health` preserved and operational on Spring WebFlux / Netty stack.
+- **Automated Tests**: Integration test verifying Gateway routing and Actuator health endpoints.
 
-1. **Request Routing**: Intelligently forwarding client requests to specific downstream microservices (`/api/v1/auth/*` → Auth Service, `/api/v1/tasks/*` → Task Service).
-2. **Centralized Security**: Validating incoming JWT access tokens at the perimeter before forwarding requests to internal services.
-3. **Rate Limiting & Throttling**: Protecting backend microservices against overuse or denial-of-service attacks.
-4. **Request Correlation & Tracing**: Injecting correlation IDs (`X-Correlation-ID`) into request headers for distributed tracing across microservices.
-5. **Observability Integration**: Exporting gateway-level HTTP latency, throughput, and error metrics to Prometheus.
+### Intentionally NOT Implemented Yet
+- ❌ **Real Microservice Targets**: Real Auth, User, Task, Learning, or Career microservices.
+- ❌ **Authentication Filter**: JWT perimeter validation filter.
+- ❌ **Rate Limiting Filter**: Redis-backed rate limiting.
+- ❌ **Service Discovery**: Eureka / Consul dynamic service routing.
+- ❌ **Load Balancing**: Client-side load balancing via Spring Cloud LoadBalancer.

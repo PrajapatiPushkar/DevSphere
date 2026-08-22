@@ -5,6 +5,19 @@ spring:
   application:
     name: api-gateway
 
+  cloud:
+    gateway:
+      routes:
+        # TEMPORARY LESSON 3 VERIFICATION ROUTE
+        # Routes /api/demo/** requests to the local temporary verification stub running on port 8081.
+        # This route exists solely for verifying gateway-to-downstream routing and will be replaced by real microservice routes in future lessons.
+        - id: temporary-demo-route
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/demo/**
+          filters:
+            - RewritePath=/api/demo/(?<segment>.*), /internal/demo/$\{segment}
+
 management:
   endpoints:
     web:

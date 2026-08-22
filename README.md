@@ -8,7 +8,7 @@ DevSphere is a developer career and productivity platform designed to help devel
 
 🚧 **Under Active Development**
 
-DevSphere is currently progressing through its incremental milestone lessons. **Lesson 1 (Production Repository Foundation)** is complete, and the **API Gateway foundation service** (`services/api-gateway`) has been initialized (**Lesson 2**). Note that actual Gateway routing and service discovery are not implemented yet and will be introduced in subsequent lessons.
+DevSphere is progressing through its incremental milestone lessons. **Lesson 1 (Repository Foundation)**, **Lesson 2 (API Gateway Foundation)**, and **Lesson 3 (Spring Cloud Gateway & Request Routing Foundation)** are complete. Spring Cloud Gateway routing is functional using a temporary verification stub route. Real business microservices will be implemented in upcoming lessons.
 
 ---
 
@@ -126,12 +126,13 @@ DevSphere/
 ## Development Roadmap
 
 - **Lesson 1**: Production Repository Foundation *(Completed)*
-- **Lesson 2**: API Gateway Foundation Service *(Current)*
-- **Lesson 3**: Identity & Authentication Service Implementation *(Upcoming)*
-- **Lesson 4**: Core Domain Services & Data Persistence *(Upcoming)*
-- **Lesson 5**: Event-Driven Integration & Messaging *(Upcoming)*
-- **Lesson 6**: Frontend Core SPA Setup & Gateway Integration *(Upcoming)*
-- **Lesson 7**: Observability, Monitoring & Production Deployment *(Upcoming)*
+- **Lesson 2**: API Gateway Foundation Service *(Completed)*
+- **Lesson 3**: Spring Cloud Gateway & Request Routing Foundation *(Current)*
+- **Lesson 4**: Identity & Authentication Service Implementation *(Upcoming)*
+- **Lesson 5**: Core Domain Services & Data Persistence *(Upcoming)*
+- **Lesson 6**: Event-Driven Integration & Messaging *(Upcoming)*
+- **Lesson 7**: Frontend Core SPA Setup & Gateway Integration *(Upcoming)*
+- **Lesson 8**: Observability, Monitoring & Production Deployment *(Upcoming)*
 
 ---
 
