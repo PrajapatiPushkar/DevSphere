@@ -8,7 +8,7 @@ DevSphere is a developer career and productivity platform designed to help devel
 
 🚧 **Under Active Development**
 
-DevSphere is progressing through its incremental milestone lessons. **Lesson 1 (Repository Foundation)**, **Lesson 2 (API Gateway Foundation)**, and **Lesson 3 (Spring Cloud Gateway & Request Routing Foundation)** are complete. Spring Cloud Gateway routing is functional using a temporary verification stub route. Real business microservices will be implemented in upcoming lessons.
+DevSphere is progressing through its incremental milestone lessons. **Lesson 1 (Repository Foundation)**, **Lesson 2 (API Gateway Foundation)**, **Lesson 3 (Spring Cloud Gateway Routing)**, and **Lesson 4 (Auth Service Foundation & User Registration)** are complete. The **Auth Service** (`services/auth-service`) manages user registration (`POST /api/v1/auth/register`), BCrypt password hashing, and MySQL database migrations.
 
 ---
 
@@ -127,8 +127,8 @@ DevSphere/
 
 - **Lesson 1**: Production Repository Foundation *(Completed)*
 - **Lesson 2**: API Gateway Foundation Service *(Completed)*
-- **Lesson 3**: Spring Cloud Gateway & Request Routing Foundation *(Current)*
-- **Lesson 4**: Identity & Authentication Service Implementation *(Upcoming)*
+- **Lesson 3**: Spring Cloud Gateway & Request Routing Foundation *(Completed)*
+- **Lesson 4**: Auth Service Foundation & User Registration *(Current)*
 - **Lesson 5**: Core Domain Services & Data Persistence *(Upcoming)*
 - **Lesson 6**: Event-Driven Integration & Messaging *(Upcoming)*
 - **Lesson 7**: Frontend Core SPA Setup & Gateway Integration *(Upcoming)*

@@ -53,7 +53,7 @@ Spring Cloud Gateway (reactive implementation built on Spring WebFlux and Reacto
 - **Automated Tests**: Integration test verifying Gateway routing and Actuator health endpoints.
 
 ### Intentionally NOT Implemented Yet
-- ❌ **Real Microservice Targets**: Real Auth, User, Task, Learning, or Career microservices.
+- ❌ **Production Auth Routing**: Direct gateway route mapping to `auth-service` (Future routing flow: `Client -> API Gateway -> Auth Service`).
 - ❌ **Authentication Filter**: JWT perimeter validation filter.
 - ❌ **Rate Limiting Filter**: Redis-backed rate limiting.
 - ❌ **Service Discovery**: Eureka / Consul dynamic service routing.
