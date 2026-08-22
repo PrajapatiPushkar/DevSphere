@@ -1,10 +1,14 @@
 package com.devsphere.auth.service;
 
+import com.devsphere.auth.dto.LoginRequest;
+import com.devsphere.auth.dto.LoginResponse;
 import com.devsphere.auth.dto.RegisterRequest;
 import com.devsphere.auth.dto.RegisterResponse;
 import com.devsphere.auth.entity.UserCredential;
 import com.devsphere.auth.exception.EmailAlreadyExistsException;
+import com.devsphere.auth.exception.InvalidCredentialsException;
 import com.devsphere.auth.repository.UserCredentialRepository;
+import com.devsphere.auth.security.JwtService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,10 +18,14 @@ public class AuthService {
 
     private final UserCredentialRepository userCredentialRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
-    public AuthService(UserCredentialRepository userCredentialRepository, PasswordEncoder passwordEncoder) {
+    public AuthService(UserCredentialRepository userCredentialRepository,
+                       PasswordEncoder passwordEncoder,
+                       JwtService jwtService) {
         this.userCredentialRepository = userCredentialRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
     }
 
     @Transactional
@@ -37,5 +45,20 @@ public class AuthService {
                 savedCredential.getEmail(),
                 savedCredential.getCreatedAt()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public LoginResponse login(LoginRequest request) {
+        String normalizedEmail = request.getEmail().toLowerCase().trim();
+
+        UserCredential credential = userCredentialRepository.findByEmail(normalizedEmail)
+                .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
+
+        if (!passwordEncoder.matches(request.getPassword(), credential.getPasswordHash())) {
+            throw new InvalidCredentialsException("Invalid email or password");
+        }
+
+        String token = jwtService.generateToken(credential.getId(), credential.getEmail());
+        return new LoginResponse(token, jwtService.getExpirationSeconds());
     }
 }

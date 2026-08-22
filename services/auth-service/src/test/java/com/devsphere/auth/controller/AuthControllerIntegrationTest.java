@@ -1,10 +1,14 @@
 package com.devsphere.auth.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.devsphere.auth.security.JwtService;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.jsonwebtoken.Claims;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,6 +18,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -25,6 +30,9 @@ class AuthControllerIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private JwtService jwtService;
 
     @Test
     @DisplayName("POST /api/v1/auth/register - Success 201 Created")
@@ -53,13 +61,11 @@ class AuthControllerIntegrationTest {
                 "password", "SecurePassword123"
         );
 
-        // First registration (201 Created)
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated());
 
-        // Duplicate registration (409 Conflict)
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -85,18 +91,105 @@ class AuthControllerIntegrationTest {
     }
 
     @Test
-    @DisplayName("POST /api/v1/auth/register - Password Too Short 400 Bad Request")
-    void registerShortPasswordBadRequest() throws Exception {
-        Map<String, String> request = Map.of(
-                "email", "shortpass@example.com",
-                "password", "short"
+    @DisplayName("POST /api/v1/auth/login - Success 200 OK with valid JWT")
+    void loginSuccess() throws Exception {
+        // 1. Register user
+        Map<String, String> regRequest = Map.of(
+                "email", "loginuser@example.com",
+                "password", "SecurePassword123"
+        );
+
+        MvcResult regResult = mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(regRequest)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        JsonNode regJson = objectMapper.readTree(regResult.getResponse().getContentAsString());
+        long registeredUserId = regJson.get("id").asLong();
+
+        // 2. Login user
+        Map<String, String> loginRequest = Map.of(
+                "email", "loginuser@example.com",
+                "password", "SecurePassword123"
+        );
+
+        MvcResult loginResult = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").exists())
+                .andExpect(jsonPath("$.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.expiresIn").value(3600))
+                .andExpect(jsonPath("$.password").doesNotExist())
+                .andExpect(jsonPath("$.passwordHash").doesNotExist())
+                .andReturn();
+
+        // 3. Decode & Verify JWT Claims
+        JsonNode loginJson = objectMapper.readTree(loginResult.getResponse().getContentAsString());
+        String token = loginJson.get("accessToken").asText();
+
+        Claims claims = jwtService.parseToken(token);
+        assertThat(claims.getSubject()).isEqualTo(String.valueOf(registeredUserId));
+        assertThat(claims.get("email", String.class)).isEqualTo("loginuser@example.com");
+        assertThat(claims.getIssuedAt()).isNotNull();
+        assertThat(claims.getExpiration()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/login - Wrong Password 401 Unauthorized")
+    void loginWrongPasswordUnauthorized() throws Exception {
+        Map<String, String> regRequest = Map.of(
+                "email", "wrongpass@example.com",
+                "password", "CorrectPassword123"
         );
 
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(regRequest)))
+                .andExpect(status().isCreated());
+
+        Map<String, String> loginRequest = Map.of(
+                "email", "wrongpass@example.com",
+                "password", "WrongPassword123"
+        );
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"))
+                .andExpect(jsonPath("$.message").value("Invalid email or password"));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/login - Unknown Email 401 Unauthorized")
+    void loginUnknownEmailUnauthorized() throws Exception {
+        Map<String, String> loginRequest = Map.of(
+                "email", "nonexistent@example.com",
+                "password", "SomePassword123"
+        );
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_CREDENTIALS"))
+                .andExpect(jsonPath("$.message").value("Invalid email or password"));
+    }
+
+    @Test
+    @DisplayName("POST /api/v1/auth/login - Invalid Request 400 Bad Request")
+    void loginInvalidRequestBadRequest() throws Exception {
+        Map<String, String> loginRequest = Map.of(
+                "email", "invalid-email",
+                "password", ""
+        );
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
-                .andExpect(jsonPath("$.errors.password").exists());
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 }

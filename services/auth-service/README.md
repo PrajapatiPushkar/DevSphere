@@ -1,21 +1,21 @@
 # DevSphere Auth Service
 
 ## Purpose
-The Auth Service is the dedicated microservice responsible for managing user identity credentials, secure password hashing, and user registration for the DevSphere platform.
+The Auth Service is the dedicated microservice responsible for managing user identity credentials, secure password hashing, user registration, and stateless JWT authentication for the DevSphere platform.
 
 ---
 
 ## Current Status
-> **User Registration Foundation (Lesson 4)**  
-> The Auth Service provides user registration (`POST /api/v1/auth/register`), BCrypt password hashing, Flyway database migrations, and isolated database persistence.  
-> **Note**: JWT authentication, login endpoints, refresh tokens, and email verification are NOT implemented yet.
+> **JWT Authentication & Login (Lesson 5)**  
+> The Auth Service provides user registration (`POST /api/v1/auth/register`), BCrypt password hashing, Flyway database migrations, user login (`POST /api/v1/auth/login`), and HMAC SHA-256 JWT access token generation.  
+> **Note**: Gateway-side JWT validation, refresh tokens, email verification, and password resets are NOT implemented yet.
 
 ---
 
 ## Responsibilities
 - User account creation and identity registration.
-- BCrypt password hashing (never stores or logs raw passwords).
-- Enforcing email uniqueness at both application and database layers.
+- BCrypt password hashing (`BCryptPasswordEncoder`).
+- User authentication and JWT access token issuance (`HS256`).
 - Exposing service health metrics via Spring Boot Actuator (`/actuator/health`).
 
 ---
@@ -23,24 +23,12 @@ The Auth Service is the dedicated microservice responsible for managing user ide
 ## Technology Stack
 - **Java**: 21
 - **Framework**: Spring Boot 3.2.5
+- **Security & Tokens**: Spring Security Crypto, JJWT (`io.jsonwebtoken:jjwt-api:0.12.5`)
 - **Persistence**: Spring Data JPA, Hibernate, MySQL
 - **Database Migrations**: Flyway (`flyway-core`, `flyway-mysql`)
-- **Security & Hashing**: Spring Security Crypto (`BCryptPasswordEncoder`)
 - **Validation**: Jakarta Bean Validation (`spring-boot-starter-validation`)
 - **Testing**: JUnit 5, MockMvc, H2 (for isolated test runs)
 - **Build Tool**: Maven
-
----
-
-## Database Configuration & Schema
-The Auth Service owns its MySQL database (`devsphere_auth`). Schema creation is managed exclusively via Flyway migrations (`db/migration/V1__create_users_table.sql`). Hibernate auto DDL is set to `validate`.
-
-### Table: `users`
-* `id` (`BIGINT AUTO_INCREMENT PRIMARY KEY`)
-* `email` (`VARCHAR(255) NOT NULL UNIQUE`)
-* `password_hash` (`VARCHAR(255) NOT NULL`)
-* `created_at` (`TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP`)
-* `updated_at` (`TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP`)
 
 ---
 
@@ -53,37 +41,12 @@ The Auth Service owns its MySQL database (`devsphere_auth`). Schema creation is 
 | `DB_NAME` | Database name | `devsphere_auth` |
 | `DB_USERNAME` | Database username | `root` |
 | `DB_PASSWORD` | Database password | *(empty)* |
+| `JWT_SECRET` | HS256 Secret (Min 32 chars / 256 bits) | *Development fallback* |
+| `JWT_EXPIRATION_SECONDS` | Token lifespan in seconds | `3600` (1 hour) |
 
 ---
 
-## Running Locally
-
-### Prerequisites
-* MySQL 8.x running on `localhost:3306` with database `devsphere_auth` created.
-
-```bash
-# Navigate to the auth-service directory
-cd services/auth-service
-
-# Run application
-mvn spring-boot:run
-```
-
-The application will start on port `8081`.
-
----
-
-## Running Automated Tests
-
-```bash
-mvn test
-```
-
-Automated tests run against an in-memory H2 database using the `test` Spring profile.
-
----
-
-## API Endpoints
+## Authentication APIs
 
 ### 1. User Registration
 
@@ -97,7 +60,7 @@ Automated tests run against an in-memory H2 database using the `test` Spring pro
 }
 ```
 
-#### Example Successful Response (`201 CREATED`)
+#### Response (`HTTP 201 CREATED`)
 ```json
 {
   "id": 1,
@@ -106,7 +69,47 @@ Automated tests run against an in-memory H2 database using the `test` Spring pro
 }
 ```
 
-#### Error Responses
+---
+
+### 2. User Login & Token Generation
+
+`POST /api/v1/auth/login`
+
+#### Example Request
+```json
+{
+  "email": "user@example.com",
+  "password": "SecurePassword123"
+}
+```
+
+#### Response (`HTTP 200 OK`)
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwiZW1haWwiOiJ1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNzU1ODgyOTIwLCJleHAiOjE3NTU4ODY1MjB9...",
+  "tokenType": "Bearer",
+  "expiresIn": 3600
+}
+```
+
+#### Authorization Header Format (Future Usage)
+```http
+Authorization: Bearer <access-token>
+```
+
+> **Note**: JWT validation at the API Gateway is NOT implemented yet.
+
+---
+
+## Error Responses
+
+* **Invalid Credentials (`401 UNAUTHORIZED`)**:
+  ```json
+  {
+    "code": "INVALID_CREDENTIALS",
+    "message": "Invalid email or password"
+  }
+  ```
 
 * **Duplicate Email (`409 CONFLICT`)**:
   ```json
@@ -122,22 +125,16 @@ Automated tests run against an in-memory H2 database using the `test` Spring pro
     "code": "VALIDATION_ERROR",
     "message": "Request validation failed",
     "errors": {
-      "email": "must be a valid email address",
-      "password": "Password must be between 8 and 100 characters"
+      "email": "must be a valid email address"
     }
   }
   ```
 
 ---
 
-## Security Notes
-- Passwords are salted and hashed using BCrypt (`BCryptPasswordEncoder`).
-- Passwords and password hashes are never logged.
-- Passwords and password hashes are never returned in API responses.
-- Plaintext passwords exist only transiently in memory during registration processing.
+## Running Automated Tests
 
----
-
-## Current Limitations & Future Responsibilities
-- **Current Limitations**: No login endpoint, no JWT generation, no token verification, no email verification, no password reset.
-- **Future Responsibilities**: Issuing JWT access/refresh tokens, login verification (`/api/v1/auth/login`), password change/reset workflows.
+```bash
+cd services/auth-service
+mvn test
+```

@@ -6,12 +6,17 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.devsphere.auth.dto.LoginRequest;
+import com.devsphere.auth.dto.LoginResponse;
 import com.devsphere.auth.dto.RegisterRequest;
 import com.devsphere.auth.dto.RegisterResponse;
 import com.devsphere.auth.entity.UserCredential;
 import com.devsphere.auth.exception.EmailAlreadyExistsException;
+import com.devsphere.auth.exception.InvalidCredentialsException;
 import com.devsphere.auth.repository.UserCredentialRepository;
+import com.devsphere.auth.security.JwtService;
 import java.time.Instant;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,11 +35,18 @@ class AuthServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
+    private JwtService jwtService;
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(userCredentialRepository, passwordEncoder);
+        jwtService = new JwtService(
+                "devsphere-super-secret-jwt-signing-key-for-local-development-must-be-at-least-256-bits-long",
+                3600
+        );
+        jwtService.init();
+
+        authService = new AuthService(userCredentialRepository, passwordEncoder, jwtService);
     }
 
     @Test
@@ -76,5 +88,56 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.register(request))
                 .isInstanceOf(EmailAlreadyExistsException.class)
                 .hasMessage("An account with this email already exists");
+    }
+
+    @Test
+    @DisplayName("Should successfully authenticate and return JWT token on valid credentials")
+    void loginSuccess() {
+        LoginRequest request = new LoginRequest("user@example.com", "SecurePassword123");
+        String hashedPassword = "$2a$10$hashedPasswordSample";
+
+        UserCredential credential = new UserCredential("user@example.com", hashedPassword);
+        credential.setId(42L);
+
+        when(userCredentialRepository.findByEmail("user@example.com")).thenReturn(Optional.of(credential));
+        when(passwordEncoder.matches("SecurePassword123", hashedPassword)).thenReturn(true);
+
+        LoginResponse response = authService.login(request);
+
+        assertThat(response.getAccessToken()).isNotBlank();
+        assertThat(response.getTokenType()).isEqualTo("Bearer");
+        assertThat(response.getExpiresIn()).isEqualTo(3600L);
+
+        var claims = jwtService.parseToken(response.getAccessToken());
+        assertThat(claims.getSubject()).isEqualTo("42");
+        assertThat(claims.get("email", String.class)).isEqualTo("user@example.com");
+    }
+
+    @Test
+    @DisplayName("Should throw InvalidCredentialsException when email is not found")
+    void loginUnknownEmailThrowsException() {
+        LoginRequest request = new LoginRequest("unknown@example.com", "SecurePassword123");
+
+        when(userCredentialRepository.findByEmail("unknown@example.com")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.login(request))
+                .isInstanceOf(InvalidCredentialsException.class)
+                .hasMessage("Invalid email or password");
+    }
+
+    @Test
+    @DisplayName("Should throw InvalidCredentialsException when password does not match")
+    void loginWrongPasswordThrowsException() {
+        LoginRequest request = new LoginRequest("user@example.com", "WrongPassword");
+        String hashedPassword = "$2a$10$hashedPasswordSample";
+
+        UserCredential credential = new UserCredential("user@example.com", hashedPassword);
+
+        when(userCredentialRepository.findByEmail("user@example.com")).thenReturn(Optional.of(credential));
+        when(passwordEncoder.matches("WrongPassword", hashedPassword)).thenReturn(false);
+
+        assertThatThrownBy(() -> authService.login(request))
+                .isInstanceOf(InvalidCredentialsException.class)
+                .hasMessage("Invalid email or password");
     }
 }

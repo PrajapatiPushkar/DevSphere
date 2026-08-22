@@ -8,7 +8,7 @@ DevSphere is a developer career and productivity platform designed to help devel
 
 🚧 **Under Active Development**
 
-DevSphere is progressing through its incremental milestone lessons. **Lesson 1 (Repository Foundation)**, **Lesson 2 (API Gateway Foundation)**, **Lesson 3 (Spring Cloud Gateway Routing)**, and **Lesson 4 (Auth Service Foundation & User Registration)** are complete. The **Auth Service** (`services/auth-service`) manages user registration (`POST /api/v1/auth/register`), BCrypt password hashing, and MySQL database migrations.
+DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 5** are complete. The **Auth Service** (`services/auth-service`) manages user registration (`POST /api/v1/auth/register`), BCrypt password hashing, user login (`POST /api/v1/auth/login`), stateless JWT access token generation (HS256), and MySQL database migrations.
 
 ---
 
@@ -128,11 +128,12 @@ DevSphere/
 - **Lesson 1**: Production Repository Foundation *(Completed)*
 - **Lesson 2**: API Gateway Foundation Service *(Completed)*
 - **Lesson 3**: Spring Cloud Gateway & Request Routing Foundation *(Completed)*
-- **Lesson 4**: Auth Service Foundation & User Registration *(Current)*
-- **Lesson 5**: Core Domain Services & Data Persistence *(Upcoming)*
-- **Lesson 6**: Event-Driven Integration & Messaging *(Upcoming)*
-- **Lesson 7**: Frontend Core SPA Setup & Gateway Integration *(Upcoming)*
-- **Lesson 8**: Observability, Monitoring & Production Deployment *(Upcoming)*
+- **Lesson 4**: Auth Service Foundation & User Registration *(Completed)*
+- **Lesson 5**: JWT Authentication & Login *(Current)*
+- **Lesson 6**: Core Domain Services & Data Persistence *(Upcoming)*
+- **Lesson 7**: Event-Driven Integration & Messaging *(Upcoming)*
+- **Lesson 8**: Frontend Core SPA Setup & Gateway Integration *(Upcoming)*
+- **Lesson 9**: Observability, Monitoring & Production Deployment *(Upcoming)*
 
 ---
 
