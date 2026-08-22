@@ -1,99 +1,70 @@
 # DevSphere API Gateway
 
 ## Purpose
-The API Gateway is designed to serve as the single entry point for all client requests in the DevSphere microservices architecture. It handles central concerns such as request routing, authentication verification, rate limiting, and request correlation.
+The API Gateway serves as the single external entry point and perimeter security boundary for all client requests in the DevSphere microservices architecture. It handles request routing, reactive JWT authentication validation, and request header sanitization before forwarding requests to downstream services.
 
 ---
 
 ## Current Status
-> **Spring Cloud Gateway Routing (Lesson 3)**  
-> The API Gateway is configured with Spring Cloud Gateway (reactive implementation). Gateway routing is operational using a temporary downstream verification route. Real microservice routes will be introduced as business services are built.
+> **Perimeter JWT Validation & Protected Routing (Lesson 6)**  
+> The API Gateway validates incoming JWT access tokens at the perimeter using a reactive `JwtAuthenticationFilter`. Public routes (`/api/v1/auth/*`, `/actuator/health`) pass through freely, while protected routes (`/api/demo/protected`) require a valid `Bearer` JWT token.
 
 ---
 
-## Current Responsibility
+## Responsibilities
 - Reactive Spring Cloud Gateway bootstrap on port `8080`.
-- Configuration-driven request routing (`/api/demo/**` → `http://localhost:8081`).
-- Health monitoring via Spring Boot Actuator endpoint (`/actuator/health`).
+- Configuration-driven request routing (`/api/v1/auth/**` → Auth Service on `8081`, `/api/demo/**` → Temporary Stub on `8081`).
+- Reactive JWT signature (HS256) & expiration validation.
+- Sanitizing and injecting trusted internal identity header (`X-Authenticated-User-Id`).
+- Returning standardized `401 Unauthorized` JSON responses.
+- Exposing service health metrics via Spring Boot Actuator (`/actuator/health`).
 
 ---
 
-## Technology Stack
-- **Java**: 21
-- **Framework**: Spring Boot 3.2.5
-- **Spring Cloud**: 2023.0.1 (`spring-cloud-starter-gateway`)
-- **Web Engine**: Spring WebFlux / Reactor Netty
-- **Actuator**: `spring-boot-starter-actuator`
-- **Testing**: `spring-boot-starter-test` (JUnit 5, WebTestClient)
-- **Build Tool**: Maven
+## Environment Variables
+
+| Variable | Description | Local Default |
+| :--- | :--- | :--- |
+| `JWT_SECRET` | HS256 Secret Key (Min 32 chars / 256 bits) | *Development fallback* |
 
 ---
 
-## Gateway Routing
+## Route Security Policy
 
-Spring Cloud Gateway routes external client requests to downstream services based on path predicates.
+### 1. Public Routes (No JWT Required)
+* `POST /api/v1/auth/register`
+* `POST /api/v1/auth/login`
+* `GET /actuator/health`
+* `GET /api/demo/hello` (Lesson 3 Routing Verification)
 
-### Temporary Verification Route
-To verify routing functionality without creating premature business microservices, a temporary verification route is configured:
+### 2. Protected Routes (JWT Required)
+* `GET /api/demo/protected` (Requires `Authorization: Bearer <valid-jwt-token>`)
 
-* **Client Request**: `GET http://localhost:8080/api/demo/hello`
-* **Gateway Action**: Rewrites `/api/demo/hello` to `/internal/demo/hello` and forwards to the temporary stub running on port `8081`.
-* **Expected Response**:
+---
+
+## Error Responses
+
+* **Missing / Malformed Token (`401 UNAUTHORIZED`)**:
   ```json
   {
-    "service": "temporary-demo-service",
-    "message": "Request successfully routed through DevSphere API Gateway"
+    "code": "UNAUTHORIZED",
+    "message": "Authentication is required"
   }
   ```
 
-> **Note**: This route exists only to verify gateway-to-downstream routing and will later be replaced by real microservice routes.
-
----
-
-## Running Locally
-
-To compile and run the API Gateway locally:
-
-```bash
-# Navigate to the service directory
-cd services/api-gateway
-
-# Run the application
-mvn spring-boot:run
-```
-
-The application will start on port `8080` (and the temporary verification stub will start on port `8081`).
+* **Invalid / Expired Token (`401 UNAUTHORIZED`)**:
+  ```json
+  {
+    "code": "INVALID_TOKEN",
+    "message": "The access token is invalid or expired"
+  }
+  ```
 
 ---
 
 ## Running Automated Tests
 
-To execute unit and application context tests:
-
 ```bash
-mvn clean test
+cd services/api-gateway
+mvn test
 ```
-
----
-
-## Health Check
-
-Verify system health using Spring Boot Actuator:
-
-* **Endpoint**: `GET http://localhost:8080/actuator/health`
-* **Expected Response**:
-  ```json
-  {
-    "status": "UP"
-  }
-  ```
-
----
-
-## Future Responsibility
-
-In future lessons, the API Gateway will be expanded to provide:
-- Dynamic request routing to real downstream microservices (Auth, Task, User, Career, etc.).
-- Perimeter security via JWT token validation filters.
-- Distributed rate limiting via Redis.
-- Observability and request correlation tracing across microservices.

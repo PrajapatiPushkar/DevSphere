@@ -8,7 +8,7 @@ DevSphere is a developer career and productivity platform designed to help devel
 
 🚧 **Under Active Development**
 
-DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 5** are complete. The **Auth Service** (`services/auth-service`) manages user registration (`POST /api/v1/auth/register`), BCrypt password hashing, user login (`POST /api/v1/auth/login`), stateless JWT access token generation (HS256), and MySQL database migrations.
+DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 6** are complete. The **API Gateway** (`services/api-gateway`) acts as the perimeter security boundary enforcing reactive JWT validation (`HS256`) on protected routes while forwarding public registration (`POST /api/v1/auth/register`) and login (`POST /api/v1/auth/login`) requests to **Auth Service** (`services/auth-service`).
 
 ---
 
@@ -129,11 +129,12 @@ DevSphere/
 - **Lesson 2**: API Gateway Foundation Service *(Completed)*
 - **Lesson 3**: Spring Cloud Gateway & Request Routing Foundation *(Completed)*
 - **Lesson 4**: Auth Service Foundation & User Registration *(Completed)*
-- **Lesson 5**: JWT Authentication & Login *(Current)*
-- **Lesson 6**: Core Domain Services & Data Persistence *(Upcoming)*
-- **Lesson 7**: Event-Driven Integration & Messaging *(Upcoming)*
-- **Lesson 8**: Frontend Core SPA Setup & Gateway Integration *(Upcoming)*
-- **Lesson 9**: Observability, Monitoring & Production Deployment *(Upcoming)*
+- **Lesson 5**: JWT Authentication & Login *(Completed)*
+- **Lesson 6**: API Gateway JWT Validation & Protected Routes *(Current)*
+- **Lesson 7**: Core Domain Services & Data Persistence *(Upcoming)*
+- **Lesson 8**: Event-Driven Integration & Messaging *(Upcoming)*
+- **Lesson 9**: Frontend Core SPA Setup & Gateway Integration *(Upcoming)*
+- **Lesson 10**: Observability, Monitoring & Production Deployment *(Upcoming)*
 
 ---
 

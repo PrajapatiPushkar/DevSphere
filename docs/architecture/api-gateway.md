@@ -2,59 +2,32 @@
 
 ## Overview
 
-The API Gateway acts as the single external gateway and reverse proxy for DevSphere client applications (Web Frontend, mobile apps, or external integrations).
+The **API Gateway** acts as the single external gateway, reverse proxy, and perimeter security boundary for all DevSphere client applications.
 
+---
+
+## Evolution of Gateway Security Architecture
+
+### Before Lesson 6 (Routing Only)
 ```
-[ Frontend Client ]
-        │
-        ▼
-  [ API Gateway ] (Port 8080)
-        │
- ┌──────┼──────────────┬──────────────┐
- ▼      ▼              ▼              ▼
-[Auth] [User]        [Task]        [Career]  ... (Microservices)
+[ Client ] ──► [ API Gateway ] ──► [ Downstream Services ]
+```
+
+### After Lesson 6 (Perimeter JWT Validation)
+```
+                                ┌── Public Route ───────────► [ Auth Service / Health ]
+                                │
+[ Client ] ──► [ API Gateway ] ─┤
+                                │                              [ Validated Token ]
+                                └── Protected Route ──► [ JWT Validation ] ─────────► [ Downstream Service ]
+                                                               Filter                    (with X-Authenticated-User-Id)
 ```
 
 ---
 
-## Lesson 3 — Gateway Routing
+## Key Highlights
 
-Spring Cloud Gateway (reactive implementation built on Spring WebFlux and Reactor Netty) has been integrated into `services/api-gateway`.
-
-### Routing Architecture
-
-```
-[ Client Request ] (GET http://localhost:8080/api/demo/hello)
-        │
-        ▼
-[ Spring Cloud Gateway ] (Port 8080)
-  - Predicate: Path=/api/demo/**
-  - Filter: RewritePath=/api/demo/(?<segment>.*), /internal/demo/${segment}
-        │
-        ▼
-[ Downstream Service ] (GET http://localhost:8081/internal/demo/hello)
-  └─► Lesson 3 Verification Only: Temporary Demo Stub Server (Port 8081)
-```
-
-### Key Highlights
-- **Configuration-Driven Routing**: Routes are defined declaratively in `application.yml`.
-- **Reactive Engine**: Utilizes non-blocking I/O for scalable request proxying.
-- **Temporary Verification Stub**: A lightweight local stub running on port `8081` validates gateway-to-downstream HTTP forwarding.
-- **Service Isolation**: Real business services (Auth, User, Task, Career, etc.) will replace the temporary demo route in subsequent lessons.
-
----
-
-## Current Status (Lesson 3 Implementation)
-
-### Implemented Functionality
-- **Reactive Bootstrap**: Spring Boot 3.2.5 + Spring Cloud Gateway (`2023.0.1`) running on Java 21.
-- **Gateway Routing Engine**: Active routing from `/api/demo/**` to `http://localhost:8081`.
-- **Health Endpoint**: `/actuator/health` preserved and operational on Spring WebFlux / Netty stack.
-- **Automated Tests**: Integration test verifying Gateway routing and Actuator health endpoints.
-
-### Intentionally NOT Implemented Yet
-- ❌ **Production Auth Routing**: Direct gateway route mapping to `auth-service` (Future routing flow: `Client -> API Gateway -> Auth Service`).
-- ❌ **Authentication Filter**: JWT perimeter validation filter.
-- ❌ **Rate Limiting Filter**: Redis-backed rate limiting.
-- ❌ **Service Discovery**: Eureka / Consul dynamic service routing.
-- ❌ **Load Balancing**: Client-side load balancing via Spring Cloud LoadBalancer.
+1. **Perimeter Authentication Boundary**: Public endpoints (`/api/v1/auth/register`, `/api/v1/auth/login`, `/actuator/health`) bypass JWT validation. Protected endpoints require a valid `Authorization: Bearer <token>` header.
+2. **Stateless Local Validation**: `JwtAuthenticationFilter` validates token signature (HS256) and expiration locally using `JwtValidator` without querying the Auth Service or any database.
+3. **Authentication vs. Business Authorization**: The API Gateway strictly performs **perimeter authentication** (identity verification). Fine-grained **business authorization** (domain permissions) remains the responsibility of downstream microservices.
+4. **Header Sanitization**: Untrusted client-supplied `X-Authenticated-User-Id` headers are stripped, and trusted user IDs extracted from validated JWT `sub` claims are attached before forwarding requests.

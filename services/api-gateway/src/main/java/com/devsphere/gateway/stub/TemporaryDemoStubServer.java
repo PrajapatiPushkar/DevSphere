@@ -8,13 +8,14 @@ import reactor.netty.DisposableServer;
 import reactor.netty.http.server.HttpServer;
 
 /**
- * TEMPORARY LESSON 3 VERIFICATION STUB
+ * TEMPORARY LESSON 3 & LESSON 6 VERIFICATION STUB
  * 
  * This stub server runs on port 8081 to act as a temporary downstream HTTP target
- * for testing Spring Cloud Gateway routing (/api/demo/** -> http://localhost:8081/internal/demo/**).
+ * for testing Spring Cloud Gateway routing (/api/demo/** -> http://localhost:8081/internal/demo/**)
+ * and perimeter JWT authentication verification (/api/demo/protected).
  * 
- * THIS IS NOT A REAL BUSINESS MICROSERVICE. It exists strictly for Lesson 3 routing verification
- * and will be removed once real business microservices (Auth, Task, User, etc.) are introduced.
+ * THIS IS NOT A REAL BUSINESS MICROSERVICE. It exists strictly for Gateway routing
+ * and JWT verification testing and will be removed once real domain microservices exist.
  */
 @Configuration
 public class TemporaryDemoStubServer {
@@ -26,7 +27,17 @@ public class TemporaryDemoStubServer {
         server = HttpServer.create()
                 .port(8081)
                 .handle((request, response) -> {
-                    if (request.uri().startsWith("/internal/demo")) {
+                    String uri = request.uri();
+                    if (uri.startsWith("/internal/demo/protected")) {
+                        String jsonResponse = """
+                                {
+                                  "service": "temporary-demo-service",
+                                  "message": "Authenticated request successfully reached downstream service"
+                                }
+                                """;
+                        return response.header("Content-Type", "application/json")
+                                .sendString(Mono.just(jsonResponse));
+                    } else if (uri.startsWith("/internal/demo")) {
                         String jsonResponse = """
                                 {
                                   "service": "temporary-demo-service",
