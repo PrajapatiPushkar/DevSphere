@@ -15,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -33,6 +34,9 @@ class AuthControllerIntegrationTest {
 
     @Autowired
     private JwtService jwtService;
+
+    @MockBean
+    private org.springframework.kafka.core.KafkaTemplate<String, com.devsphere.auth.event.UserRegisteredEvent> kafkaTemplate;
 
     @Test
     @DisplayName("POST /api/v1/auth/register - Success 201 Created")

@@ -23,6 +23,17 @@ spring:
     enabled: true
     locations: classpath:db/migration
 
+  kafka:
+    bootstrap-servers: ${spring.embedded.kafka.brokers:localhost:9092}
+    admin:
+      auto-create: false
+    producer:
+      retries: 0
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        max.block.ms: 1000
+
 jwt:
   secret: devsphere-super-secret-jwt-signing-key-for-local-development-must-be-at-least-256-bits-long
   expiration-seconds: 3600

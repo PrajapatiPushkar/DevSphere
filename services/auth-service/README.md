@@ -16,6 +16,7 @@ The Auth Service is the dedicated microservice responsible for managing user ide
 - User account creation and identity registration.
 - BCrypt password hashing (`BCryptPasswordEncoder`).
 - User authentication and JWT access token issuance (`HS256`).
+- Publishing asynchronous `UserRegisteredEvent` domain events to Apache Kafka (`devsphere.user.v1`).
 - Exposing service health metrics via Spring Boot Actuator (`/actuator/health`).
 
 ---

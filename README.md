@@ -8,10 +8,11 @@ DevSphere is a developer career and productivity platform designed to help devel
 
 🚧 **Under Active Development**
 
-DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 7** are complete:
-- **API Gateway** (`services/api-gateway`, Port `8080`): Reactive API Gateway enforcing JWT validation (`HS256`) and forwarding trusted user identity (`X-Authenticated-User-Id`).
-- **Auth Service** (`services/auth-service`, Port `8081`): Authentication microservice owning user credentials (`devsphere_auth` database), BCrypt hashing, registration, and JWT issuance.
-- **User Service** (`services/user-service`, Port `8082`): Real domain microservice owning user profiles (`devsphere_user` database) with Flyway migrations, profile retrieval, lazy profile initialization, and updates.
+DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 8** are complete:
+- **API Gateway** (`services/api-gateway`, Port `8080`): Perimeter Gateway enforcing JWT validation (`HS256`) and identity header propagation (`X-Authenticated-User-Id`).
+- **Auth Service** (`services/auth-service`, Port `8081`): Authentication microservice owning user credentials (`devsphere_auth`), registration, password hashing, and publishing `UserRegisteredEvent` domain events to Apache Kafka.
+- **User Service** (`services/user-service`, Port `8082`): User profile domain microservice (`devsphere_user`), consuming `UserRegisteredEvent` from Kafka (`devsphere.user.v1`) to initialize user profiles asynchronously and idempotently.
+- **Apache Kafka**: Message broker enabling decoupled, eventual-consistent asynchronous communication between microservices.
 
 ---
 
@@ -135,7 +136,7 @@ DevSphere/
 - **Lesson 5**: JWT Authentication & Login *(Completed)*
 - **Lesson 6**: API Gateway JWT Validation & Protected Routes *(Completed)*
 - **Lesson 7**: User Service & Profile Management *(Completed)*
-- **Lesson 8**: Event-Driven Integration & Messaging *(Upcoming)*
+- **Lesson 8**: Event-Driven User Registration with Apache Kafka *(Completed)*
 - **Lesson 9**: Frontend Core SPA Setup & Gateway Integration *(Upcoming)*
 - **Lesson 10**: Observability, Monitoring & Production Deployment *(Upcoming)*
 

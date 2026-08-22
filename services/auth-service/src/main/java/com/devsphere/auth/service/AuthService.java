@@ -5,10 +5,12 @@ import com.devsphere.auth.dto.LoginResponse;
 import com.devsphere.auth.dto.RegisterRequest;
 import com.devsphere.auth.dto.RegisterResponse;
 import com.devsphere.auth.entity.UserCredential;
+import com.devsphere.auth.event.UserRegisteredDomainEvent;
 import com.devsphere.auth.exception.EmailAlreadyExistsException;
 import com.devsphere.auth.exception.InvalidCredentialsException;
 import com.devsphere.auth.repository.UserCredentialRepository;
 import com.devsphere.auth.security.JwtService;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,13 +21,16 @@ public class AuthService {
     private final UserCredentialRepository userCredentialRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public AuthService(UserCredentialRepository userCredentialRepository,
                        PasswordEncoder passwordEncoder,
-                       JwtService jwtService) {
+                       JwtService jwtService,
+                       ApplicationEventPublisher eventPublisher) {
         this.userCredentialRepository = userCredentialRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -39,6 +44,8 @@ public class AuthService {
         String hashedPassword = passwordEncoder.encode(request.getPassword());
         UserCredential credential = new UserCredential(normalizedEmail, hashedPassword);
         UserCredential savedCredential = userCredentialRepository.save(credential);
+
+        eventPublisher.publishEvent(new UserRegisteredDomainEvent(savedCredential.getId()));
 
         return new RegisterResponse(
                 savedCredential.getId(),
