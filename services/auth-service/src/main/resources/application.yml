@@ -33,6 +33,12 @@ jwt:
   secret: ${JWT_SECRET:devsphere-super-secret-jwt-signing-key-for-local-development-must-be-at-least-256-bits-long}
   expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
 
+app:
+  outbox:
+    polling-interval: 1000
+    batch-size: 50
+    max-retries: 5
+
 management:
   endpoints:
     web:

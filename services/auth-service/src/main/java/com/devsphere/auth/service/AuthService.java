@@ -5,12 +5,11 @@ import com.devsphere.auth.dto.LoginResponse;
 import com.devsphere.auth.dto.RegisterRequest;
 import com.devsphere.auth.dto.RegisterResponse;
 import com.devsphere.auth.entity.UserCredential;
-import com.devsphere.auth.event.UserRegisteredDomainEvent;
 import com.devsphere.auth.exception.EmailAlreadyExistsException;
 import com.devsphere.auth.exception.InvalidCredentialsException;
+import com.devsphere.auth.outbox.OutboxService;
 import com.devsphere.auth.repository.UserCredentialRepository;
 import com.devsphere.auth.security.JwtService;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,16 +20,16 @@ public class AuthService {
     private final UserCredentialRepository userCredentialRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
-    private final ApplicationEventPublisher eventPublisher;
+    private final OutboxService outboxService;
 
     public AuthService(UserCredentialRepository userCredentialRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
-                       ApplicationEventPublisher eventPublisher) {
+                       OutboxService outboxService) {
         this.userCredentialRepository = userCredentialRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
-        this.eventPublisher = eventPublisher;
+        this.outboxService = outboxService;
     }
 
     @Transactional
@@ -45,7 +44,7 @@ public class AuthService {
         UserCredential credential = new UserCredential(normalizedEmail, hashedPassword);
         UserCredential savedCredential = userCredentialRepository.save(credential);
 
-        eventPublisher.publishEvent(new UserRegisteredDomainEvent(savedCredential.getId()));
+        outboxService.saveUserRegisteredOutboxEvent(savedCredential.getId());
 
         return new RegisterResponse(
                 savedCredential.getId(),

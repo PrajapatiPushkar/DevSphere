@@ -11,9 +11,9 @@ import com.devsphere.auth.dto.LoginResponse;
 import com.devsphere.auth.dto.RegisterRequest;
 import com.devsphere.auth.dto.RegisterResponse;
 import com.devsphere.auth.entity.UserCredential;
-import com.devsphere.auth.event.UserRegisteredDomainEvent;
 import com.devsphere.auth.exception.EmailAlreadyExistsException;
 import com.devsphere.auth.exception.InvalidCredentialsException;
+import com.devsphere.auth.outbox.OutboxService;
 import com.devsphere.auth.repository.UserCredentialRepository;
 import com.devsphere.auth.security.JwtService;
 import java.time.Instant;
@@ -25,7 +25,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,7 +37,7 @@ class AuthServiceTest {
     private PasswordEncoder passwordEncoder;
 
     @Mock
-    private ApplicationEventPublisher eventPublisher;
+    private OutboxService outboxService;
 
     private JwtService jwtService;
     private AuthService authService;
@@ -51,11 +50,11 @@ class AuthServiceTest {
         );
         jwtService.init();
 
-        authService = new AuthService(userCredentialRepository, passwordEncoder, jwtService, eventPublisher);
+        authService = new AuthService(userCredentialRepository, passwordEncoder, jwtService, outboxService);
     }
 
     @Test
-    @DisplayName("Should successfully register a new user credential with hashed password and publish domain event")
+    @DisplayName("Should successfully register a new user credential and persist outbox event atomically")
     void registerNewUserSuccess() {
         RegisterRequest request = new RegisterRequest("testuser@example.com", "SecurePassword123");
         String hashedPassword = "$2a$10$hashedPasswordSample";
@@ -82,7 +81,7 @@ class AuthServiceTest {
         assertThat(captured.getEmail()).isEqualTo("testuser@example.com");
         assertThat(captured.getPasswordHash()).isEqualTo(hashedPassword);
 
-        verify(eventPublisher).publishEvent(any(UserRegisteredDomainEvent.class));
+        verify(outboxService).saveUserRegisteredOutboxEvent(1L);
     }
 
     @Test

@@ -1,6 +1,12 @@
 package com.devsphere.auth.event;
 
 import com.devsphere.auth.config.KafkaProducerConfig;
+import com.devsphere.auth.outbox.OutboxEvent;
+import com.devsphere.auth.outbox.OutboxEventRepository;
+import com.devsphere.auth.outbox.OutboxPublisher;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,7 +15,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.support.SendResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -21,24 +26,30 @@ import static org.mockito.Mockito.when;
 class UserRegistrationKafkaProducerTest {
 
     @Mock
+    private OutboxEventRepository outboxEventRepository;
+
+    @Mock
     private KafkaTemplate<String, UserRegisteredEvent> kafkaTemplate;
 
-    private UserRegisteredEventListener eventListener;
+    private OutboxPublisher outboxPublisher;
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @BeforeEach
     void setUp() {
-        eventListener = new UserRegisteredEventListener(kafkaTemplate);
+        outboxPublisher = new OutboxPublisher(outboxEventRepository, kafkaTemplate, objectMapper, 50, 5);
     }
 
     @Test
-    void handleUserRegistered_publishesUserRegisteredEventWithCorrectFields() {
+    void outboxPublisher_publishesUserRegisteredEventWithCorrectFields() throws Exception {
         Long userId = 101L;
-        UserRegisteredDomainEvent domainEvent = new UserRegisteredDomainEvent(userId);
+        UserRegisteredEvent event = new UserRegisteredEvent(userId);
+        String payload = objectMapper.writeValueAsString(event);
+        OutboxEvent outboxEvent = new OutboxEvent(event.getEventId(), "USER", "101", "USER_REGISTERED", 1, payload);
 
         when(kafkaTemplate.send(any(), any(), any()))
                 .thenReturn(CompletableFuture.completedFuture(null));
 
-        eventListener.handleUserRegistered(domainEvent);
+        outboxPublisher.processEvent(outboxEvent);
 
         ArgumentCaptor<String> topicCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> keyCaptor = ArgumentCaptor.forClass(String.class);
@@ -60,9 +71,6 @@ class UserRegistrationKafkaProducerTest {
 
     @Test
     void userRegisteredEventPayload_doesNotContainPasswordsOrTokens() {
-        UserRegisteredEvent event = new UserRegisteredEvent(101L);
-
-        // Verify structure has no password, token, or secret fields
         assertThat(UserRegisteredEvent.class.getDeclaredFields())
                 .extracting("name")
                 .containsExactlyInAnyOrder("eventId", "eventType", "eventVersion", "occurredAt", "userId");
