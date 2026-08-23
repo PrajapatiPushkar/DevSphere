@@ -6,18 +6,19 @@ The API Gateway serves as the single external entry point and perimeter security
 ---
 
 ## Current Status
-> **Perimeter JWT Validation & Protected Routing (Lesson 6)**  
-> The API Gateway validates incoming JWT access tokens at the perimeter using a reactive `JwtAuthenticationFilter`. Public routes (`/api/v1/auth/*`, `/actuator/health`) pass through freely, while protected routes (`/api/demo/protected`) require a valid `Bearer` JWT token.
+> **Service Discovery & Perimeter JWT Validation (Lesson 6 & Lesson 12)**  
+> The API Gateway registers as a Eureka client (`DEVSPHERE-API-GATEWAY`) and dynamically routes traffic to downstream microservices using discovery URIs (`lb://DEVSPHERE-AUTH-SERVICE`, `lb://DEVSPHERE-USER-SERVICE`). Perimeter security validates incoming JWT access tokens using a reactive `JwtAuthenticationFilter`.
 
 ---
 
 ## Responsibilities
 - Reactive Spring Cloud Gateway bootstrap on port `8080`.
-- Configuration-driven request routing (`/api/v1/auth/**` → Auth Service on `8081`, `/api/demo/**` → Temporary Stub on `8081`).
+- Dynamic discovery-based routing via Netflix Eureka (`lb://DEVSPHERE-AUTH-SERVICE`, `lb://DEVSPHERE-USER-SERVICE`).
 - Reactive JWT signature (HS256) & expiration validation.
 - Sanitizing and injecting trusted internal identity header (`X-Authenticated-User-Id`).
 - Returning standardized `401 Unauthorized` JSON responses.
 - Exposing service health metrics via Spring Boot Actuator (`/actuator/health`).
+
 
 ---
 

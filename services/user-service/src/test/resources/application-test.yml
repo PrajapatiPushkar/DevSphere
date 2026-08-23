@@ -44,17 +44,24 @@ spring:
         spring.json.use.type.headers: false
         spring.json.value.default.type: com.devsphere.user.event.UserRegisteredEvent
 
-app:
-  kafka:
-    consumer:
-      max-attempts: 3
-      retry-backoff-ms: 1000
-
   data:
     redis:
       repositories:
         enabled: false
 
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
+
+app:
+  kafka:
+    consumer:
+      max-attempts: 3
+      retry-backoff-ms: 1000
+  cache:
+    user-profile-ttl: 5m
 
 management:
   endpoints:

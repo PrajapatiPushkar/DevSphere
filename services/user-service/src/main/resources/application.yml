@@ -3,7 +3,15 @@ server:
 
 spring:
   application:
-    name: user-service
+    name: DEVSPHERE-USER-SERVICE
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_SERVER_URL:http://localhost:8761/eureka/}
+  instance:
+    prefer-ip-address: true
+
 
   datasource:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:devsphere_user}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC

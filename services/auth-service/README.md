@@ -6,20 +6,21 @@ The Auth Service is the dedicated microservice responsible for managing user ide
 ---
 
 ## Current Status
-> **Transactional Outbox Pattern (Lesson 10)**  
-> The Auth Service persists user identity credentials (`users` table) and domain events (`outbox_events` table) in the **SAME** atomic database transaction during user registration (`POST /api/v1/auth/register`).  
-> A background worker (`OutboxPublisher`) polls pending outbox events and reliably dispatches them to Apache Kafka (`devsphere.user.v1`).
+> **Service Discovery & Transactional Outbox Pattern (Lesson 10 & Lesson 12)**  
+> The Auth Service registers as a Eureka client (`DEVSPHERE-AUTH-SERVICE`) for dynamic service discovery. User registration (`POST /api/v1/auth/register`) persists credentials (`users`) and domain events (`outbox_events`) atomically. A background worker (`OutboxPublisher`) polls outbox events and dispatches them to Apache Kafka (`devsphere.user.v1`).
 
 ---
 
 ## Responsibilities
 - User account creation and identity registration.
+- Service discovery client registration (`DEVSPHERE-AUTH-SERVICE` on port `8081`).
 - BCrypt password hashing (`BCryptPasswordEncoder`).
 - User authentication and JWT access token issuance (`HS256`).
 - Atomic outbox persistence (`outbox_events` table in `devsphere_auth`).
 - Scheduled event dispatching (`OutboxPublisher`) to Apache Kafka (`devsphere.user.v1`).
 - Bounded retries and failure handling for event publishing.
 - Exposing service health metrics via Spring Boot Actuator (`/actuator/health`).
+
 
 ---
 
