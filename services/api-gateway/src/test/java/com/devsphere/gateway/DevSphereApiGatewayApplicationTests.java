@@ -191,4 +191,32 @@ class DevSphereApiGatewayApplicationTests {
                 .jsonPath("$.error").isEqualTo("FORBIDDEN")
                 .jsonPath("$.code").isEqualTo("FORBIDDEN");
     }
+
+    @Test
+    @DisplayName("Gateway fallback for Auth Service returns 503 Service Unavailable")
+    void authServiceFallbackReturns503() {
+        webTestClient.get()
+                .uri("/fallback/auth-service")
+                .exchange()
+                .expectStatus().isEqualTo(503)
+                .expectBody()
+                .jsonPath("$.status").isEqualTo(503)
+                .jsonPath("$.error").isEqualTo("SERVICE_UNAVAILABLE")
+                .jsonPath("$.code").isEqualTo("SERVICE_UNAVAILABLE")
+                .jsonPath("$.message").isEqualTo("Auth Service is temporarily unavailable. Please try again later.");
+    }
+
+    @Test
+    @DisplayName("Gateway fallback for User Service returns 503 Service Unavailable")
+    void userServiceFallbackReturns503() {
+        webTestClient.get()
+                .uri("/fallback/user-service")
+                .exchange()
+                .expectStatus().isEqualTo(503)
+                .expectBody()
+                .jsonPath("$.status").isEqualTo(503)
+                .jsonPath("$.error").isEqualTo("SERVICE_UNAVAILABLE")
+                .jsonPath("$.code").isEqualTo("SERVICE_UNAVAILABLE")
+                .jsonPath("$.message").isEqualTo("User Service is temporarily unavailable. Please try again later.");
+    }
 }

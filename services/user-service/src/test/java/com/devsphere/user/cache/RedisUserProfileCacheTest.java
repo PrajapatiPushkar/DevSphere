@@ -29,12 +29,14 @@ class RedisUserProfileCacheTest {
     @Mock
     private ValueOperations<String, UserProfileResponse> valueOperations;
 
+    private io.micrometer.core.instrument.MeterRegistry meterRegistry;
     private RedisUserProfileCache cache;
     private final Duration ttl = Duration.ofMinutes(5);
 
     @BeforeEach
     void setUp() {
-        cache = new RedisUserProfileCache(redisTemplate, ttl);
+        meterRegistry = new io.micrometer.core.instrument.simple.SimpleMeterRegistry();
+        cache = new RedisUserProfileCache(redisTemplate, meterRegistry, ttl);
     }
 
     @Test
@@ -76,6 +78,7 @@ class RedisUserProfileCacheTest {
         Optional<UserProfileResponse> result = cache.get(userId);
 
         assertThat(result).isEmpty();
+        assertThat(meterRegistry.counter("devsphere_resilience_fallback_total", "service", "user-service", "dependency", "redis").count()).isEqualTo(1.0);
     }
 
     @Test
@@ -99,6 +102,7 @@ class RedisUserProfileCacheTest {
         when(redisTemplate.opsForValue()).thenThrow(new RedisConnectionFailureException("Redis down"));
 
         assertThatCode(() -> cache.put(userId, profile)).doesNotThrowAnyException();
+        assertThat(meterRegistry.counter("devsphere_resilience_fallback_total", "service", "user-service", "dependency", "redis").count()).isEqualTo(1.0);
     }
 
     @Test
@@ -120,5 +124,6 @@ class RedisUserProfileCacheTest {
         when(redisTemplate.delete("user-profile:101")).thenThrow(new RedisConnectionFailureException("Redis down"));
 
         assertThatCode(() -> cache.evict(userId)).doesNotThrowAnyException();
+        assertThat(meterRegistry.counter("devsphere_resilience_fallback_total", "service", "user-service", "dependency", "redis").count()).isEqualTo(1.0);
     }
 }

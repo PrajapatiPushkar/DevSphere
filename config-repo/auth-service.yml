@@ -36,3 +36,14 @@ app:
     polling-interval: 1000
     batch-size: 50
     max-retries: 5
+
+resilience4j:
+  bulkhead:
+    instances:
+      authBulkhead:
+        maxConcurrentCalls: 10
+        maxWaitDuration: 100ms
+  timelimiter:
+    instances:
+      authTimeLimiter:
+        timeoutDuration: 3s

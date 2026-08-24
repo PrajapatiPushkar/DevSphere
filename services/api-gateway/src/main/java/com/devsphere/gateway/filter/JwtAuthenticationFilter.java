@@ -16,6 +16,7 @@ import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.slf4j.Logger;
@@ -34,7 +35,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private static final List<String> PUBLIC_PATH_PREFIXES = List.of(
             "/api/v1/auth/",
             "/actuator/health",
-            "/api/demo/hello"
+            "/api/demo/hello",
+            "/fallback/"
     );
 
     private static final List<String> ADMIN_PATH_PREFIXES = List.of(
@@ -49,6 +51,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         this(jwtValidator, new SimpleMeterRegistry());
     }
 
+    @org.springframework.beans.factory.annotation.Autowired
     public JwtAuthenticationFilter(JwtValidator jwtValidator, MeterRegistry meterRegistry) {
         this.jwtValidator = jwtValidator;
         this.meterRegistry = meterRegistry != null ? meterRegistry : new SimpleMeterRegistry();

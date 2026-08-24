@@ -40,6 +40,9 @@ Once running, access the Prometheus UI at:
 - `devsphere_user_profile_created_total{source="kafka|http"}`
 - `devsphere_cache_hits_total{cache="user_profile"}`
 - `devsphere_cache_misses_total{cache="user_profile"}`
+- `devsphere_resilience_fallback_total{service="auth-service|user-service|gateway",dependency="http|redis"}`
+- `resilience4j_circuitbreaker_state{name="authServiceCircuitBreaker|userServiceCircuitBreaker",state="closed|open|half_open"}`
+- `resilience4j_circuitbreaker_calls_total{name=...,kind="successful|failed|ignored|not_permitted"}`
 
 ## Low-Cardinality Security Rule
 

@@ -35,6 +35,7 @@ public class SecurityConfig {
         this(jwtAuthenticationFilter, new SimpleMeterRegistry());
     }
 
+    @org.springframework.beans.factory.annotation.Autowired
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, MeterRegistry meterRegistry) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.meterRegistry = meterRegistry != null ? meterRegistry : new SimpleMeterRegistry();

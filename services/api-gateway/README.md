@@ -6,21 +6,21 @@ The API Gateway serves as the single external entry point and perimeter security
 ---
 
 ## Current Status
-> **Production Perimeter Authorization & Role Extraction (Lesson 15)**  
-> The API Gateway validates JWT signatures and expiration, extracts role claims (`roles`), strips untrusted client headers (`X-Role`, `X-User-Role`, `X-Admin`, `X-Authenticated-User-Id`, `X-Authenticated-User-Roles`), enforces coarse route-level authorization (returning 403 Forbidden for unauthorized access to admin paths), forwards trusted user identity and roles downstream, exposes Prometheus metrics (`/actuator/prometheus`), and dynamically routes traffic using Eureka.
+> **Production Resilience & Fault Tolerance Boundary (Lesson 16)**  
+> The API Gateway enforces bounded downstream timeouts (connect timeout 3s, response timeout 5s, timelimiter 3s), Resilience4j circuit breakers (`authServiceCircuitBreaker`, `userServiceCircuitBreaker`), header sanitization, role extraction, perimeter authorization, and truthful 503 Service Unavailable fallbacks (`FallbackController`) without returning fake business data.
 
 ---
 
 ## Responsibilities
 - Reactive Spring Cloud Gateway bootstrap on port `8080`.
-- Centralized configuration import from Spring Cloud Config Server.
+- Centralized configuration import from Spring Cloud Config Server (`http://localhost:8888`).
 - Dynamic discovery-based routing via Netflix Eureka (`lb://DEVSPHERE-AUTH-SERVICE`, `lb://DEVSPHERE-USER-SERVICE`).
 - Reactive JWT signature (HS256) & expiration validation.
 - Role extraction from JWT claims (`roles: ["USER"]` / `["ADMIN"]`).
 - Coarse route authorization (e.g. enforcing `ROLE_ADMIN` on `/api/v1/admin/**` routes).
-- Sanitizing client headers and injecting trusted internal identity headers (`X-Authenticated-User-Id`, `X-Authenticated-User-Roles`).
-- Prometheus metrics exposure via `/actuator/prometheus` including `devsphere_auth_authorization_denied_total`.
-- Exposing service health metrics via Spring Boot Actuator (`/actuator/health`).
+- Bounded downstream timeouts and Spring Cloud Circuit Breaker Resilience4j protection.
+- Truthful 503 Service Unavailable fallback handling (`/fallback/auth-service`, `/fallback/user-service`).
+- Prometheus metrics exposure via `/actuator/prometheus` including `devsphere_resilience_fallback_total` and Resilience4j circuit breaker metrics.
 
 ---
 

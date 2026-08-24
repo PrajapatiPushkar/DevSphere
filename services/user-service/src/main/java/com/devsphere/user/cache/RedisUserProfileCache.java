@@ -56,6 +56,7 @@ public class RedisUserProfileCache implements UserProfileCache {
             log.info("User profile cache miss: userId={}", userId);
         } catch (Exception e) {
             meterRegistry.counter("devsphere.cache.misses.total", "cache", "user_profile").increment();
+            meterRegistry.counter("devsphere_resilience_fallback_total", "service", "user-service", "dependency", "redis").increment();
             log.warn("Redis unavailable during cache get for userId={}: {}", userId, e.getMessage());
         }
 
@@ -73,6 +74,7 @@ public class RedisUserProfileCache implements UserProfileCache {
             redisTemplate.opsForValue().set(key, profile, ttl);
             log.info("User profile cache put: userId={}", userId);
         } catch (Exception e) {
+            meterRegistry.counter("devsphere_resilience_fallback_total", "service", "user-service", "dependency", "redis").increment();
             log.warn("Redis unavailable during cache put for userId={}: {}", userId, e.getMessage());
         }
     }
@@ -88,6 +90,7 @@ public class RedisUserProfileCache implements UserProfileCache {
             Boolean deleted = redisTemplate.delete(key);
             log.info("User profile cache eviction: userId={}, deleted={}", userId, deleted);
         } catch (Exception e) {
+            meterRegistry.counter("devsphere_resilience_fallback_total", "service", "user-service", "dependency", "redis").increment();
             log.warn("Redis unavailable during cache eviction for userId={}: {}", userId, e.getMessage());
         }
     }

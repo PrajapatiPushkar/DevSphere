@@ -6,15 +6,8 @@ The Auth Service is the dedicated microservice responsible for managing user ide
 ---
 
 ## Current Status
-> **Production Authorization & Role-Based Access Control (Lesson 15)**  
-> The Auth Service assigns server-controlled roles (`USER`, `ADMIN`), prevents public self-registration as `ADMIN`, incorporates role authorization claims (`roles: ["USER"]`) into signed JWT tokens, safely seeds an initial local development admin user (`admin@devsphere.local`), exposes Prometheus application metrics (`/actuator/prometheus`), registers as a Eureka client (`DEVSPHERE-AUTH-SERVICE`), and publishes outbox events atomically.
-
----
-
-## Authorization & Role Model
-- **USER Role**: Default role assigned server-side to all publicly registered users.
-- **ADMIN Role**: Assigned to administrative accounts via controlled initializer (`AdminUserInitializer` for local dev/testing).
-- **JWT Claims**: Tokens include `sub` (userId), `email`, and `roles` (`["USER"]` or `["ADMIN"]`). Tokens NEVER contain passwords, password hashes, or secrets.
+> **Production Resilience & Fault Tolerance (Lesson 16)**  
+> The Auth Service assigns server-controlled roles (`USER`, `ADMIN`), prevents non-idempotent write operation retry storms on registration, enforces BCrypt credential verification without retrying invalid login attempts, integrates Resilience4j configuration via Config Server, exposes Prometheus metrics (`/actuator/prometheus`), registers with Eureka (`DEVSPHERE-AUTH-SERVICE`), and publishes transactional outbox events reliably.
 
 ---
 
@@ -26,6 +19,7 @@ The Auth Service is the dedicated microservice responsible for managing user ide
   - `devsphere_auth_authorization_denied_total{reason="unauthenticated|forbidden"}`
   - `devsphere_outbox_events_published_total{event_type="UserRegisteredEvent",status="success|failed"}`
   - `devsphere_outbox_publish_failures_total{event_type="UserRegisteredEvent"}`
+  - `devsphere_resilience_fallback_total{service="auth-service",dependency="..."}`
 
 ---
 

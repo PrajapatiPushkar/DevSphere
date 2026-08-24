@@ -28,7 +28,7 @@ Kafka Topic (devsphere.user.v1) ──► Consumer ──[Idempotency & Retries]
 ## Observability & Custom Metrics
 
 - **Prometheus Metrics Endpoint**: `/actuator/prometheus`
-- **Custom Business Metrics**:
+- **Custom Business & Resilience Metrics**:
   - `devsphere_kafka_events_processed_total{event_type="UserRegisteredEvent",status="success|duplicate|failure"}`
   - `devsphere_kafka_duplicate_events_total{event_type="UserRegisteredEvent"}`
   - `devsphere_kafka_events_retry_total{event_type="UserRegisteredEvent"}`
@@ -36,6 +36,7 @@ Kafka Topic (devsphere.user.v1) ──► Consumer ──[Idempotency & Retries]
   - `devsphere_user_profile_created_total{source="kafka|http"}`
   - `devsphere_cache_hits_total{cache="user_profile"}`
   - `devsphere_cache_misses_total{cache="user_profile"}`
+  - `devsphere_resilience_fallback_total{service="user-service",dependency="redis"}`
 
 ---
 

@@ -13,12 +13,22 @@ spring:
           uri: lb://DEVSPHERE-AUTH-SERVICE
           predicates:
             - Path=/api/v1/auth/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: authServiceCircuitBreaker
+                fallbackUri: forward:/fallback/auth-service
 
         # User Service Route (Protected User Profiles via Discovery)
         - id: user-service-route
           uri: lb://DEVSPHERE-USER-SERVICE
           predicates:
             - Path=/api/v1/users/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: userServiceCircuitBreaker
+                fallbackUri: forward:/fallback/user-service
 
         # Temporary Verification Route (Lesson 3 / Lesson 6 Verification Stub)
         - id: temporary-demo-route
@@ -27,3 +37,34 @@ spring:
             - Path=/api/demo/**
           filters:
             - RewritePath=/api/demo/(?<segment>.*), /internal/demo/$\{segment}
+
+      httpclient:
+        connect-timeout: 3000
+        response-timeout: 5s
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 5
+        minimumNumberOfCalls: 3
+        failureRateThreshold: 50
+        waitDurationInOpenState: 5000ms
+        permittedNumberOfCallsInHalfOpenState: 2
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+    instances:
+      authServiceCircuitBreaker:
+        baseConfig: default
+      userServiceCircuitBreaker:
+        baseConfig: default
+
+  timelimiter:
+    configs:
+      default:
+        timeoutDuration: 3s
+    instances:
+      authServiceCircuitBreaker:
+        baseConfig: default
+      userServiceCircuitBreaker:
+        baseConfig: default

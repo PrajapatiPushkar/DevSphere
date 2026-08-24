@@ -59,3 +59,14 @@ management:
   health:
     redis:
       enabled: false
+
+resilience4j:
+  bulkhead:
+    instances:
+      userProfileBulkhead:
+        maxConcurrentCalls: 10
+        maxWaitDuration: 100ms
+  timelimiter:
+    instances:
+      userProfileTimeLimiter:
+        timeoutDuration: 3s
