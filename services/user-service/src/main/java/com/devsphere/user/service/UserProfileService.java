@@ -5,9 +5,12 @@ import com.devsphere.user.dto.UpdateUserProfileRequest;
 import com.devsphere.user.dto.UserProfileResponse;
 import com.devsphere.user.entity.UserProfile;
 import com.devsphere.user.repository.UserProfileRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,10 +21,19 @@ public class UserProfileService {
 
     private final UserProfileRepository userProfileRepository;
     private final UserProfileCache userProfileCache;
+    private final MeterRegistry meterRegistry;
 
     public UserProfileService(UserProfileRepository userProfileRepository, UserProfileCache userProfileCache) {
+        this(userProfileRepository, userProfileCache, new SimpleMeterRegistry());
+    }
+
+    @Autowired
+    public UserProfileService(UserProfileRepository userProfileRepository,
+                              UserProfileCache userProfileCache,
+                              MeterRegistry meterRegistry) {
         this.userProfileRepository = userProfileRepository;
         this.userProfileCache = userProfileCache;
+        this.meterRegistry = meterRegistry;
     }
 
     @Transactional
@@ -41,6 +53,7 @@ public class UserProfileService {
                 .orElseGet(() -> {
                     log.info("User profile lazily created for userId: {}", userId);
                     UserProfile newProfile = new UserProfile(userId);
+                    meterRegistry.counter("devsphere.user.profile.created.total", "source", "http").increment();
                     return userProfileRepository.save(newProfile);
                 });
 
@@ -61,6 +74,7 @@ public class UserProfileService {
         UserProfile profile = userProfileRepository.findByUserId(userId)
                 .orElseGet(() -> {
                     log.info("User profile lazily created during update for userId: {}", userId);
+                    meterRegistry.counter("devsphere.user.profile.created.total", "source", "http").increment();
                     return new UserProfile(userId);
                 });
 

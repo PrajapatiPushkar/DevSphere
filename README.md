@@ -8,17 +8,17 @@ DevSphere is a developer career and productivity platform designed to help devel
 
 🚧 **Under Active Development**
 
-DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 13** are complete:
+DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 14** are complete:
+- **Production Observability Foundation** (`infrastructure/monitoring/prometheus.yml`): Standardized Spring Boot Actuator, Micrometer Prometheus metrics (`/actuator/prometheus`), JVM, HTTP, and low-cardinality custom business metrics.
 - **Config Server** (`services/config-server`, Port `8888`): Dedicated Spring Cloud Config Server backed by an independent local Git repository (`config-repo/`) providing centralized non-secret runtime configuration.
 - **Service Discovery** (`services/service-discovery`, Port `8761`): Standalone Netflix Eureka Service Discovery server maintaining an in-memory registry of all active microservice instances.
 - **API Gateway** (`services/api-gateway`, Port `8080`): Perimeter Gateway registered with Eureka (`DEVSPHERE-API-GATEWAY`), importing centralized configuration from Config Server, enforcing JWT validation (`HS256`), identity header propagation (`X-Authenticated-User-Id`), and dynamic service discovery routing (`lb://`).
-- **Auth Service** (`services/auth-service`, Port `8081`): Authentication microservice registered with Eureka (`DEVSPHERE-AUTH-SERVICE`), importing centralized configuration, owning user credentials (`devsphere_auth`), registration, password hashing, and atomic outbox event persistence (`outbox_events` table). Features scheduled `OutboxPublisher` for reliable Kafka event dispatching.
-- **User Service** (`services/user-service`, Port `8082`): User profile domain microservice registered with Eureka (`DEVSPHERE-USER-SERVICE`), importing centralized configuration, consuming `UserRegisteredEvent` from Kafka (`devsphere.user.v1`). Hardened with database-backed idempotency (`processed_events` table), atomic JPA transactions, controlled retries, fixed backoff, and Dead Letter Topic (`devsphere.user.v1.DLT`) poison message isolation. Features Redis distributed caching (`user-profile:{userId}`) using cache-aside with MySQL source of truth.
+- **Auth Service** (`services/auth-service`, Port `8081`): Authentication microservice registered with Eureka (`DEVSPHERE-AUTH-SERVICE`), importing centralized configuration, owning user credentials (`devsphere_auth`), registration, password hashing, and atomic outbox event persistence (`outbox_events` table). Features custom metrics for registrations, logins, and outbox event publishing.
+- **User Service** (`services/user-service`, Port `8082`): User profile domain microservice registered with Eureka (`DEVSPHERE-USER-SERVICE`), importing centralized configuration, consuming `UserRegisteredEvent` from Kafka (`devsphere.user.v1`). Features custom metrics for Kafka processing, retries, duplicate events, DLT routing, profile creation, and Redis cache hits/misses.
 - **Centralized Configuration**: Spring Cloud Config architecture managing shared and service-specific non-secret configurations in `config-repo/`.
 - **Apache Kafka**: Message broker enabling decoupled, eventual-consistent asynchronous communication between microservices with DLT routing.
 - **Redis**: Distributed cache store providing high-performance, demand-driven caching for `User Service` profile reads.
-- **Transactional Outbox Pattern**: Atomic database persistence of business entity and event records in `Auth Service`, eliminating dual-write failure windows during Kafka broker downtime.
-- **Consumer Reliability & DLT**: Database-backed event idempotency, Spring Kafka `DefaultErrorHandler` retries, fixed backoff, and Dead Letter Topic routing.
+- **Transactional Outbox Pattern**: Atomic database persistence of business entity and event records in `Auth Service`.
 
 ---
 
@@ -26,57 +26,23 @@ DevSphere is progressing through its incremental milestone lessons. **Lessons 1 
 
 ```
                          ┌──────────────────────┐
-                         │    Config Git Repo   │
-                         │   versioned config   │
+                         │      Prometheus      │
+                         │        :9090         │
                          └──────────┬───────────┘
                                     │
-                                    ▼
-                         ┌──────────────────────┐
-                         │    Config Server     │
-                         │        :8888         │
-                         └──────────┬───────────┘
+                             scrape metrics
                                     │
-              ┌─────────────────────┼─────────────────────┐
-              │                     │                     │
-              ▼                     ▼                     ▼
-        API Gateway            Auth Service          User Service
-              │                     │                     │
-              └─────────────────────┼─────────────────────┘
-                                    │
-                                    ▼
-                              Eureka :8761
-                                    │
-                         Service Discovery
+             ┌──────────────────────┼──────────────────────┐
+             │                      │                      │
+             ▼                      ▼                      ▼
+       API Gateway             Auth Service           User Service
+       /actuator/*             /actuator/*            /actuator/*
+             │                      │                      │
+             └────────────── Micrometer ──────────────────┘
 
-Event Architecture:
-
-Auth Service ──► Transactional Outbox ──► Kafka ──► User Service ──► Idempotent Consumer ──► Processed Events
-
-Caching Architecture:
-
-User Service ──► Redis Cache (Cache-Aside) ──► MySQL Fallback
+Infrastructure:
+Config Server :8888 | Eureka Server :8761 | Kafka :9092 | Redis :6379 | MySQL :3306
 ```
-
----
-
-## Vision
-
-DevSphere is envisioned as a production-grade multi-user SaaS platform built for developers. The goal is to provide a single, unified workspace for personal productivity, skill growth, and career trajectory management, backed by a resilient distributed system architecture.
-
----
-
-## Technology Stack
-
-### Backend
-- **Language & Core Framework**: Java 21, Spring Boot 3.2.5
-- **Centralized Configuration**: Spring Cloud Config Server & Client (2023.0.1)
-- **Service Discovery**: Spring Cloud Netflix Eureka Server & Client (2023.0.1)
-- **Gateway & Routing**: Spring Cloud Gateway 4.1.2 (Dynamic `lb://` routing)
-- **Security & Identity**: Spring Security, JJWT (JWT generation & validation)
-- **Persistence & Migration**: Spring Data JPA, Hibernate, Flyway, MySQL
-- **Event-Driven Messaging & Outbox**: Spring Kafka, Apache Kafka, Transactional Outbox Pattern, Dead Letter Topic (DLT)
-- **Distributed Caching**: Spring Data Redis, Redis 7.2
-- **Build Tool**: Maven
 
 ---
 
@@ -95,6 +61,7 @@ DevSphere is envisioned as a production-grade multi-user SaaS platform built for
 - **Lesson 11**: Production-Grade Kafka Consumer Reliability *(Completed)*
 - **Lesson 12**: Service Discovery with Eureka *(Completed)*
 - **Lesson 13**: Centralized Configuration with Spring Cloud Config *(Completed)*
+- **Lesson 14**: Production Observability Foundation *(Completed)*
 
 ---
 

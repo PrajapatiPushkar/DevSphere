@@ -3,10 +3,13 @@ package com.devsphere.auth.outbox;
 import com.devsphere.auth.config.KafkaProducerConfig;
 import com.devsphere.auth.event.UserRegisteredEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +25,7 @@ public class OutboxPublisher {
     private final OutboxEventRepository outboxEventRepository;
     private final KafkaTemplate<String, UserRegisteredEvent> kafkaTemplate;
     private final ObjectMapper objectMapper;
+    private final MeterRegistry meterRegistry;
     private final int batchSize;
     private final int maxRetries;
 
@@ -31,9 +35,21 @@ public class OutboxPublisher {
             ObjectMapper objectMapper,
             @Value("${app.outbox.batch-size:50}") int batchSize,
             @Value("${app.outbox.max-retries:5}") int maxRetries) {
+        this(outboxEventRepository, kafkaTemplate, objectMapper, new SimpleMeterRegistry(), batchSize, maxRetries);
+    }
+
+    @Autowired
+    public OutboxPublisher(
+            OutboxEventRepository outboxEventRepository,
+            KafkaTemplate<String, UserRegisteredEvent> kafkaTemplate,
+            ObjectMapper objectMapper,
+            MeterRegistry meterRegistry,
+            @Value("${app.outbox.batch-size:50}") int batchSize,
+            @Value("${app.outbox.max-retries:5}") int maxRetries) {
         this.outboxEventRepository = outboxEventRepository;
         this.kafkaTemplate = kafkaTemplate;
         this.objectMapper = objectMapper;
+        this.meterRegistry = meterRegistry;
         this.batchSize = batchSize;
         this.maxRetries = maxRetries;
     }
@@ -78,6 +94,7 @@ public class OutboxPublisher {
         event.setStatus(OutboxStatus.PUBLISHED);
         event.setPublishedAt(Instant.now());
         outboxEventRepository.save(event);
+        meterRegistry.counter("devsphere.outbox.events.published.total", "event_type", event.getEventType(), "status", "success").increment();
         log.info("Outbox event marked PUBLISHED for eventId: {}, aggregateId: {}", event.getEventId(), event.getAggregateId());
     }
 
@@ -85,9 +102,11 @@ public class OutboxPublisher {
         int newRetryCount = event.getRetryCount() + 1;
         event.setRetryCount(newRetryCount);
         event.setLastError(ex.getMessage() != null ? ex.getMessage() : ex.toString());
+        meterRegistry.counter("devsphere.outbox.publish.failures.total", "event_type", event.getEventType()).increment();
 
         if (newRetryCount >= maxRetries) {
             event.setStatus(OutboxStatus.FAILED);
+            meterRegistry.counter("devsphere.outbox.events.published.total", "event_type", event.getEventType(), "status", "failed").increment();
             log.error("Outbox event eventId: {} reached max retries ({}) and is marked FAILED: {}",
                     event.getEventId(), maxRetries, ex.getMessage());
         } else {

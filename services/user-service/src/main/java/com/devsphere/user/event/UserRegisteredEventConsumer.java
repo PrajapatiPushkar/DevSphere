@@ -4,8 +4,11 @@ import com.devsphere.user.entity.ProcessedEvent;
 import com.devsphere.user.entity.UserProfile;
 import com.devsphere.user.repository.ProcessedEventRepository;
 import com.devsphere.user.repository.UserProfileRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
@@ -20,11 +23,20 @@ public class UserRegisteredEventConsumer {
 
     private final UserProfileRepository userProfileRepository;
     private final ProcessedEventRepository processedEventRepository;
+    private final MeterRegistry meterRegistry;
 
     public UserRegisteredEventConsumer(UserProfileRepository userProfileRepository,
                                        ProcessedEventRepository processedEventRepository) {
+        this(userProfileRepository, processedEventRepository, new SimpleMeterRegistry());
+    }
+
+    @Autowired
+    public UserRegisteredEventConsumer(UserProfileRepository userProfileRepository,
+                                       ProcessedEventRepository processedEventRepository,
+                                       MeterRegistry meterRegistry) {
         this.userProfileRepository = userProfileRepository;
         this.processedEventRepository = processedEventRepository;
+        this.meterRegistry = meterRegistry;
     }
 
     @KafkaListener(topics = USER_EVENTS_TOPIC, groupId = USER_SERVICE_GROUP_ID)
@@ -32,6 +44,7 @@ public class UserRegisteredEventConsumer {
     public void consumeUserRegisteredEvent(UserRegisteredEvent event) {
         if (event == null) {
             log.warn("Received null Kafka message in UserRegisteredEventConsumer");
+            meterRegistry.counter("devsphere.kafka.events.processed.total", "event_type", "Unknown", "status", "failure").increment();
             throw new IllegalArgumentException("Received null Kafka message");
         }
 
@@ -41,35 +54,46 @@ public class UserRegisteredEventConsumer {
         if (!isValidEvent(event)) {
             log.error("Processing failure: invalid or unsupported event payload with eventId: {}, eventType: {}, version: {}, userId: {}",
                     event.getEventId(), event.getEventType(), event.getEventVersion(), event.getUserId());
+            meterRegistry.counter("devsphere.kafka.events.processed.total", "event_type", event.getEventType() != null ? event.getEventType() : "Unknown", "status", "failure").increment();
             throw new IllegalArgumentException("Invalid or unsupported UserRegisteredEvent payload");
         }
 
         String eventId = event.getEventId();
         Long userId = event.getUserId();
+        String eventType = event.getEventType();
 
         // 1. Idempotency Check using eventId
         if (processedEventRepository.existsByEventId(eventId)) {
             log.info("Event already processed for eventId: {} (userId: {}). Safely acknowledging duplicate event.",
                     eventId, userId);
+            meterRegistry.counter("devsphere.kafka.events.processed.total", "event_type", eventType, "status", "duplicate").increment();
+            meterRegistry.counter("devsphere.kafka.duplicate.events.total", "event_type", eventType).increment();
             return;
         }
 
-        // 2. Business Processing & Processed Event Persistence within atomic transaction
-        boolean profileExists = userProfileRepository.findByUserId(userId).isPresent();
-        if (!profileExists) {
-            UserProfile newProfile = new UserProfile(userId);
-            userProfileRepository.save(newProfile);
-            log.info("Created user profile for userId: {} (eventId: {})", userId, eventId);
-        } else {
-            log.info("User profile already exists for userId: {}, recording processed eventId: {}", userId, eventId);
-        }
-
         try {
-            ProcessedEvent processedEvent = new ProcessedEvent(eventId, event.getEventType());
+            // 2. Business Processing & Processed Event Persistence within atomic transaction
+            boolean profileExists = userProfileRepository.findByUserId(userId).isPresent();
+            if (!profileExists) {
+                UserProfile newProfile = new UserProfile(userId);
+                userProfileRepository.save(newProfile);
+                meterRegistry.counter("devsphere.user.profile.created.total", "source", "kafka").increment();
+                log.info("Created user profile for userId: {} (eventId: {})", userId, eventId);
+            } else {
+                log.info("User profile already exists for userId: {}, recording processed eventId: {}", userId, eventId);
+            }
+
+            ProcessedEvent processedEvent = new ProcessedEvent(eventId, eventType);
             processedEventRepository.saveAndFlush(processedEvent);
+            meterRegistry.counter("devsphere.kafka.events.processed.total", "event_type", eventType, "status", "success").increment();
             log.info("Successfully recorded processed eventId: {} for userId: {}", eventId, userId);
         } catch (DataIntegrityViolationException e) {
+            meterRegistry.counter("devsphere.kafka.events.processed.total", "event_type", eventType, "status", "duplicate").increment();
+            meterRegistry.counter("devsphere.kafka.duplicate.events.total", "event_type", eventType).increment();
             log.warn("Concurrent duplicate event detected via DB unique constraint for eventId: {}. Safely acknowledging.", eventId);
+        } catch (Exception e) {
+            meterRegistry.counter("devsphere.kafka.events.processed.total", "event_type", eventType, "status", "failure").increment();
+            throw e;
         }
     }
 

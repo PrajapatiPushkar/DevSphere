@@ -6,19 +6,26 @@ The API Gateway serves as the single external entry point and perimeter security
 ---
 
 ## Current Status
-> **Centralized Configuration, Service Discovery & Perimeter JWT Validation (Lesson 13)**  
-> The API Gateway consumes centralized non-secret configuration from Spring Cloud Config Server (`http://localhost:8888`), registers as a Eureka client (`DEVSPHERE-API-GATEWAY`), and dynamically routes traffic to downstream microservices using discovery URIs (`lb://DEVSPHERE-AUTH-SERVICE`, `lb://DEVSPHERE-USER-SERVICE`). Perimeter security validates incoming JWT access tokens using a reactive `JwtAuthenticationFilter`.
+> **Observability, Centralized Config, Service Discovery & Perimeter JWT Validation (Lesson 14)**  
+> The API Gateway exposes operational metrics via `/actuator/prometheus` (`io.micrometer:micrometer-registry-prometheus`), consumes centralized configuration from Spring Cloud Config Server (`http://localhost:8888`), registers as a Eureka client (`DEVSPHERE-API-GATEWAY`), and dynamically routes traffic to downstream microservices using discovery URIs (`lb://DEVSPHERE-AUTH-SERVICE`, `lb://DEVSPHERE-USER-SERVICE`).
 
 ---
 
 ## Responsibilities
 - Reactive Spring Cloud Gateway bootstrap on port `8080`.
-- Centralized configuration import from Spring Cloud Config Server (`spring.config.import=configserver:http://localhost:8888`).
+- Centralized configuration import from Spring Cloud Config Server.
 - Dynamic discovery-based routing via Netflix Eureka (`lb://DEVSPHERE-AUTH-SERVICE`, `lb://DEVSPHERE-USER-SERVICE`).
 - Reactive JWT signature (HS256) & expiration validation.
 - Sanitizing and injecting trusted internal identity header (`X-Authenticated-User-Id`).
-- Returning standardized `401 Unauthorized` JSON responses.
+- Prometheus metrics exposure via `/actuator/prometheus`.
 - Exposing service health metrics via Spring Boot Actuator (`/actuator/health`).
+
+---
+
+## Actuator & Prometheus Endpoints
+
+- `GET /actuator/health`: Service health indicator.
+- `GET /actuator/prometheus`: Micrometer Prometheus metrics scrape target.
 
 ---
 
@@ -38,31 +45,10 @@ The API Gateway serves as the single external entry point and perimeter security
 * `POST /api/v1/auth/register`
 * `POST /api/v1/auth/login`
 * `GET /actuator/health`
-* `GET /api/demo/hello` (Lesson 3 Routing Verification)
+* `GET /actuator/prometheus`
 
 ### 2. Protected Routes (JWT Required)
-* `GET /api/demo/protected` (Requires `Authorization: Bearer <valid-jwt-token>`)
 * `GET /api/v1/users/me`
-
----
-
-## Error Responses
-
-* **Missing / Malformed Token (`401 UNAUTHORIZED`)**:
-  ```json
-  {
-    "code": "UNAUTHORIZED",
-    "message": "Authentication is required"
-  }
-  ```
-
-* **Invalid / Expired Token (`401 UNAUTHORIZED`)**:
-  ```json
-  {
-    "code": "INVALID_TOKEN",
-    "message": "The access token is invalid or expired"
-  }
-  ```
 
 ---
 

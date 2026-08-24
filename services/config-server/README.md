@@ -10,61 +10,15 @@ Spring Cloud Config Server microservice providing centralized configuration mana
 - **Annotation**: `@EnableConfigServer`
 - **Configuration Repository**: Git-backed (`config-repo/`)
 
-## Architecture
+## Observability & Endpoints
 
-```
-                    ┌─────────────────────────┐
-                    │    Config Repository    │
-                    │      (config-repo)      │
-                    └────────────┬────────────┘
-                                 │
-                                 ▼
-                    ┌─────────────────────────┐
-                    │     Config Server       │
-                    │         :8888           │
-                    └────────────┬────────────┘
-                                 │
-                 ┌───────────────┼────────────────┐
-                 ▼               ▼                ▼
-          API Gateway      Auth Service      User Service
-```
-
-## Running Locally
-
-To start the Config Server:
-
-```bash
-cd services/config-server
-mvn spring-boot:run
-```
-
-## Config Server APIs
-
-Once running, verify served configuration via HTTP GET:
-
-- **API Gateway Config**: `http://localhost:8888/api-gateway/default`
-- **Auth Service Config**: `http://localhost:8888/auth-service/default`
-- **User Service Config**: `http://localhost:8888/user-service/default`
-- **Service Discovery Config**: `http://localhost:8888/service-discovery/default`
-
-## Health Check
-
-- `GET http://localhost:8888/actuator/health`
-
-Returns:
-```json
-{
-  "status": "UP"
-}
-```
-
-## Secret Policy
-
-No secrets are stored in `config-repo` or exposed via Config Server. Placeholders such as `${JWT_SECRET}` and `${DB_PASSWORD}` are resolved via environment variables at client runtime.
+- `GET /actuator/health`: Service health status check.
+- `GET /actuator/prometheus`: Micrometer Prometheus metrics scrape target.
+- `GET /api-gateway/default`: API Gateway configuration payload.
+- `GET /auth-service/default`: Auth Service configuration payload.
+- `GET /user-service/default`: User Service configuration payload.
 
 ## Testing
-
-Run unit tests:
 
 ```bash
 mvn test

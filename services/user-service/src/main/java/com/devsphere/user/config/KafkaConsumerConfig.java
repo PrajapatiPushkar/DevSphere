@@ -1,5 +1,6 @@
 package com.devsphere.user.config;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import org.apache.kafka.common.TopicPartition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +28,8 @@ public class KafkaConsumerConfig {
     @Bean
     public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory(
             ConsumerFactory<String, Object> consumerFactory,
-            KafkaTemplate<Object, Object> kafkaTemplate) {
+            KafkaTemplate<Object, Object> kafkaTemplate,
+            MeterRegistry meterRegistry) {
 
         ConcurrentKafkaListenerContainerFactory<String, Object> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
@@ -36,6 +38,7 @@ public class KafkaConsumerConfig {
                 kafkaTemplate,
                 (record, exception) -> {
                     String dltTopic = record.topic() + ".DLT";
+                    meterRegistry.counter("devsphere.kafka.events.dlt.total", "event_type", "UserRegisteredEvent").increment();
                     log.warn("Routing message to DLT topic: {} [partition: {}, offset: {}] after retry exhaustion. Cause: {}",
                             dltTopic, record.partition(), record.offset(),
                             exception != null ? exception.getMessage() : "Unknown");
@@ -48,6 +51,7 @@ public class KafkaConsumerConfig {
 
         DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, backOff);
         errorHandler.setRetryListeners((record, ex, deliveryAttempt) -> {
+            meterRegistry.counter("devsphere.kafka.events.retry.total", "event_type", "UserRegisteredEvent").increment();
             log.warn("Kafka processing retry attempt {}/{} for topic: {}, partition: {}, offset: {}, key: {}. Error: {}",
                     deliveryAttempt, maxAttempts, record.topic(), record.partition(), record.offset(), record.key(), ex.getMessage());
         });
