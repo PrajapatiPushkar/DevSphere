@@ -5,26 +5,74 @@ spring:
   application:
     name: DEVSPHERE-API-GATEWAY
 
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: ${SPRING_REDIS_PORT:6379}
+      timeout: ${SPRING_REDIS_TIMEOUT:2000ms}
+
   cloud:
     gateway:
       routes:
-        # Auth Service Route (Public Registration & Login via Discovery)
-        - id: auth-service-route
+        # Auth Service Registration Route (Strict IP-Based Rate Limiting)
+        - id: auth-register-route
           uri: lb://DEVSPHERE-AUTH-SERVICE
           predicates:
-            - Path=/api/v1/auth/**
+            - Path=/api/v1/auth/register
           filters:
+            - name: DistributedRateLimiter
+              args:
+                keyResolver: "#{@ipKeyResolver}"
+                rateLimiter: "#{@authRegisterRateLimiter}"
+                routeId: "auth-register"
             - name: CircuitBreaker
               args:
                 name: authServiceCircuitBreaker
                 fallbackUri: forward:/fallback/auth-service
 
-        # User Service Route (Protected User Profiles via Discovery)
+        # Auth Service Login Route (Strict IP-Based Rate Limiting)
+        - id: auth-login-route
+          uri: lb://DEVSPHERE-AUTH-SERVICE
+          predicates:
+            - Path=/api/v1/auth/login
+          filters:
+            - name: DistributedRateLimiter
+              args:
+                keyResolver: "#{@ipKeyResolver}"
+                rateLimiter: "#{@authLoginRateLimiter}"
+                routeId: "auth-login"
+            - name: CircuitBreaker
+              args:
+                name: authServiceCircuitBreaker
+                fallbackUri: forward:/fallback/auth-service
+
+        # Auth Service Default Route (Public IP-Based Rate Limiting)
+        - id: auth-service-route
+          uri: lb://DEVSPHERE-AUTH-SERVICE
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - name: DistributedRateLimiter
+              args:
+                keyResolver: "#{@ipKeyResolver}"
+                rateLimiter: "#{@publicDefaultRateLimiter}"
+                routeId: "auth-service"
+            - name: CircuitBreaker
+              args:
+                name: authServiceCircuitBreaker
+                fallbackUri: forward:/fallback/auth-service
+
+        # User Service Route (Protected Identity-Based Rate Limiting)
         - id: user-service-route
           uri: lb://DEVSPHERE-USER-SERVICE
           predicates:
             - Path=/api/v1/users/**
           filters:
+            - name: DistributedRateLimiter
+              args:
+                keyResolver: "#{@userKeyResolver}"
+                rateLimiter: "#{@authenticatedUserRateLimiter}"
+                routeId: "user-service"
             - name: CircuitBreaker
               args:
                 name: userServiceCircuitBreaker
@@ -38,8 +86,28 @@ spring:
           filters:
             - RewritePath=/api/demo/(?<segment>.*), /internal/demo/$\{segment}
 
+app:
+  rate-limit:
+    enabled: ${APP_RATE_LIMIT_ENABLED:true}
+    fail-open: ${APP_RATE_LIMIT_FAIL_OPEN:true}
+    timeout-ms: ${APP_RATE_LIMIT_TIMEOUT_MS:2000}
+    login:
+      replenish-rate: 5
+      burst-capacity: 10
+    registration:
+      replenish-rate: 5
+      burst-capacity: 10
+    authenticated:
+      replenish-rate: 20
+      burst-capacity: 40
+    public-default:
+      replenish-rate: 10
+      burst-capacity: 20
 
 management:
+  health:
+    redis:
+      enabled: false
   opentelemetry:
     resource-attributes:
       service.name: devsphere-api-gateway

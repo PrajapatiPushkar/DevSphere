@@ -62,7 +62,16 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         String path = exchange.getRequest().getURI().getPath();
 
         if (isPublicPath(path)) {
-            return chain.filter(exchange);
+            ServerHttpRequest sanitizedRequest = exchange.getRequest().mutate()
+                    .headers(httpHeaders -> {
+                        httpHeaders.remove(AUTH_USER_ID_HEADER);
+                        httpHeaders.remove(AUTH_USER_ROLES_HEADER);
+                        httpHeaders.remove("X-Role");
+                        httpHeaders.remove("X-User-Role");
+                        httpHeaders.remove("X-Admin");
+                    })
+                    .build();
+            return chain.filter(exchange.mutate().request(sanitizedRequest).build());
         }
 
         String authHeader = exchange.getRequest().getHeaders().getFirst(AUTH_HEADER);
@@ -143,6 +152,6 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     @Override
     public int getOrder() {
-        return -1;
+        return -100;
     }
 }
