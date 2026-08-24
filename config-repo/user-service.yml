@@ -59,6 +59,11 @@ management:
   health:
     redis:
       enabled: false
+  opentelemetry:
+    resource-attributes:
+      service.name: devsphere-user-service
+      service.version: 0.0.1-SNAPSHOT
+      deployment.environment: ${SPRING_PROFILES_ACTIVE:development}
 
 resilience4j:
   bulkhead:

@@ -38,9 +38,13 @@ spring:
           filters:
             - RewritePath=/api/demo/(?<segment>.*), /internal/demo/$\{segment}
 
-      httpclient:
-        connect-timeout: 3000
-        response-timeout: 5s
+
+management:
+  opentelemetry:
+    resource-attributes:
+      service.name: devsphere-api-gateway
+      service.version: 0.0.1-SNAPSHOT
+      deployment.environment: ${SPRING_PROFILES_ACTIVE:development}
 
 resilience4j:
   circuitbreaker:

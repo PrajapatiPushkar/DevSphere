@@ -1,9 +1,12 @@
 package com.devsphere.auth.config;
 
+import com.devsphere.auth.event.UserRegisteredEvent;
 import org.apache.kafka.clients.admin.NewTopic;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.kafka.config.TopicBuilder;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.core.ProducerFactory;
 
 @Configuration
 public class KafkaProducerConfig {
@@ -17,4 +20,12 @@ public class KafkaProducerConfig {
                 .replicas(1)
                 .build();
     }
+
+    @Bean
+    public KafkaTemplate<String, UserRegisteredEvent> kafkaTemplate(ProducerFactory<String, UserRegisteredEvent> producerFactory) {
+        KafkaTemplate<String, UserRegisteredEvent> kafkaTemplate = new KafkaTemplate<>(producerFactory);
+        kafkaTemplate.setObservationEnabled(true);
+        return kafkaTemplate;
+    }
 }
+

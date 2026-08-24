@@ -8,7 +8,8 @@ DevSphere is a developer career and productivity platform designed to help devel
 
 🚧 **Under Active Development**
 
-DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 16** are complete:
+DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 17** are complete:
+- **Distributed Tracing Foundation (Lesson 17)**: Integrated Micrometer Tracing with OpenTelemetry bridge (`micrometer-tracing-bridge-otel`) and OTLP exporter (`opentelemetry-exporter-otlp`), W3C Trace Context propagation (`traceparent`), HTTP request tracing across Gateway and microservices, asynchronous Kafka trace context propagation via message headers, custom domain business spans (`auth.registration`, `auth.login`, `outbox.publish`, `user.profile.get`, `user.profile.update`, `kafka.user-registered.process`), trace-log correlation in application logs, and configurable sampling probability.
 - **Production Resilience & Fault Tolerance (Lesson 16)**: Integrated Spring Cloud Circuit Breaker and Resilience4j bounded timeouts, selective retries, circuit breakers, bulkhead resource isolation, graceful HTTP 503 fallbacks, and failure classification while preserving non-idempotent registration write safety and Kafka consumer retry separation.
 - **Production Authorization & RBAC (Lesson 15)**: Integrated Role-Based Access Control (`USER`, `ADMIN`), server-controlled role assignment, JWT role claims (`roles: ["USER"]`), API Gateway perimeter route authorization, microservice-level independent JWT validation, resource ownership checks (`authenticatedUserId == targetUserId OR ROLE_ADMIN`), and standard 401 Unauthorized vs 403 Forbidden HTTP semantics.
 - **Production Observability Foundation** (`infrastructure/monitoring/prometheus.yml`): Standardized Spring Boot Actuator, Micrometer Prometheus metrics (`/actuator/prometheus`), JVM, HTTP, and low-cardinality custom business metrics.
@@ -26,30 +27,31 @@ DevSphere is progressing through its incremental milestone lessons. **Lessons 1 
 ## Architecture Diagram
 
 ```
-Client
-  │
-  ▼
-API Gateway (:8080)
-  │
-  ├── Bounded Timeouts (3s/5s)
-  ├── Circuit Breaker (authServiceCircuitBreaker, userServiceCircuitBreaker)
-  └── Safe Fallback (503 Service Unavailable)
-  │
-  ▼
-Eureka Discovery (:8761)
-  │
-  ├───────────────────────────────┐
-  ▼                               ▼
-Auth Service (:8081)           User Service (:8082)
-                                  │
-                                  ├── Redis Cache (:6379)
-                                  │     ↓ fallback
-                                  │   MySQL (devsphere_user)
-                                  │
-                                  └── Kafka Consumer
+                         ┌─────────────────────┐
+                         │    OTLP Collector   │
+                         │      :4317/:4318    │
+                         └──────────┬──────────┘
+                                    │
+                                  traces
+                                    │
+        ┌───────────────────────────┼───────────────────────────┐
+        │                           │                           │
+        ▼                           ▼                           ▼
+ API Gateway                  Auth Service                User Service
+        │                           │                           │
+        │                           │                           ├── Redis
+        │                           │                           └── MySQL
+        │                           │
+        └────────────── W3C Trace Context ─────────────────────┘
+                                    │
+                                    ▼
+                                  Kafka
+                                    │
+                                    ▼
+                              User Service
 
-Authentication & Outbox Flow:
-Auth Service ──► Transactional Outbox ──► Kafka Broker ──► User Service Consumer
+Metrics:  Services ──► Prometheus (/actuator/prometheus)
+Logs:     Services ──► Application Logs [traceId-spanId MDC Correlation]
 ```
 
 ---
@@ -72,9 +74,11 @@ Auth Service ──► Transactional Outbox ──► Kafka Broker ──► Use
 - **Lesson 14**: Production Observability Foundation *(Completed)*
 - **Lesson 15**: Production-Grade Authorization and RBAC *(Completed)*
 - **Lesson 16**: Production Resilience and Fault Tolerance *(Completed)*
+- **Lesson 17**: Distributed Tracing Foundation with OpenTelemetry *(Completed)*
 
 ---
 
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
+

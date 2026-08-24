@@ -12,6 +12,8 @@ import com.devsphere.auth.repository.UserCredentialRepository;
 import com.devsphere.auth.security.JwtService;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.tracing.ScopedSpan;
+import io.micrometer.tracing.Tracer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,29 +27,45 @@ public class AuthService {
     private final JwtService jwtService;
     private final OutboxService outboxService;
     private final MeterRegistry meterRegistry;
+    private final Tracer tracer;
 
     public AuthService(UserCredentialRepository userCredentialRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
                        OutboxService outboxService) {
-        this(userCredentialRepository, passwordEncoder, jwtService, outboxService, new SimpleMeterRegistry());
+        this(userCredentialRepository, passwordEncoder, jwtService, outboxService, new SimpleMeterRegistry(), null);
     }
 
-    @Autowired
     public AuthService(UserCredentialRepository userCredentialRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
                        OutboxService outboxService,
                        MeterRegistry meterRegistry) {
+        this(userCredentialRepository, passwordEncoder, jwtService, outboxService, meterRegistry, null);
+    }
+
+    @Autowired(required = false)
+    public AuthService(UserCredentialRepository userCredentialRepository,
+                       PasswordEncoder passwordEncoder,
+                       JwtService jwtService,
+                       OutboxService outboxService,
+                       MeterRegistry meterRegistry,
+                       Tracer tracer) {
         this.userCredentialRepository = userCredentialRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.outboxService = outboxService;
         this.meterRegistry = meterRegistry;
+        this.tracer = tracer;
     }
 
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
+        ScopedSpan span = tracer != null ? tracer.startScopedSpan("auth.registration") : null;
+        if (span != null) {
+            span.tag("service.operation", "register");
+            span.tag("event.type", "UserRegisteredEvent");
+        }
         try {
             String normalizedEmail = request.getEmail().toLowerCase().trim();
 
@@ -69,13 +87,24 @@ public class AuthService {
                     savedCredential.getCreatedAt()
             );
         } catch (Exception e) {
+            if (span != null) {
+                span.error(e);
+            }
             meterRegistry.counter("devsphere.auth.registration.total", "status", "failure").increment();
             throw e;
+        } finally {
+            if (span != null) {
+                span.end();
+            }
         }
     }
 
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
+        ScopedSpan span = tracer != null ? tracer.startScopedSpan("auth.login") : null;
+        if (span != null) {
+            span.tag("service.operation", "login");
+        }
         try {
             String normalizedEmail = request.getEmail().toLowerCase().trim();
 
@@ -90,8 +119,16 @@ public class AuthService {
             meterRegistry.counter("devsphere.auth.login.total", "status", "success").increment();
             return new LoginResponse(token, jwtService.getExpirationSeconds());
         } catch (Exception e) {
+            if (span != null) {
+                span.error(e);
+            }
             meterRegistry.counter("devsphere.auth.login.total", "status", "failure").increment();
             throw e;
+        } finally {
+            if (span != null) {
+                span.end();
+            }
         }
     }
 }
+

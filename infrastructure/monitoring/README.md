@@ -44,7 +44,24 @@ Once running, access the Prometheus UI at:
 - `resilience4j_circuitbreaker_state{name="authServiceCircuitBreaker|userServiceCircuitBreaker",state="closed|open|half_open"}`
 - `resilience4j_circuitbreaker_calls_total{name=...,kind="successful|failed|ignored|not_permitted"}`
 
-## Low-Cardinality Security Rule
+## Distributed Tracing & OTLP Export
+
+DevSphere uses **Micrometer Tracing** with **OpenTelemetry bridge** and **OTLP export** for vendor-neutral distributed tracing across all services.
+
+### Tracing Architecture
+
+- **Metrics**: Exposed via `/actuator/prometheus` -> Scraped by Prometheus (`:9090`).
+- **Traces**: Exported via OpenTelemetry OTLP -> Exporter endpoint (`http://localhost:4318/v1/traces`).
+- **Logs**: Formatted with MDC trace correlation (`[traceId-spanId]`).
+
+### Key Trace Configuration
+
+- `management.tracing.sampling.probability`: Default `1.0` (100% sampling for dev).
+- `management.otlp.tracing.endpoint`: `http://localhost:4318/v1/traces`.
+- Propagation: Standard W3C Trace Context (`traceparent` HTTP header & Kafka record headers).
+
+### Low-Cardinality Security Rule
 
 > [!IMPORTANT]
-> Prometheus metric labels must never include dynamic user identifiers (`userId`, `email`, `eventId`, `JWT`). Labels are restricted to static, bounded strings (`status`, `event_type`, `source`, `cache`).
+> Prometheus metric labels and trace span tags must never include dynamic user identifiers, credentials, or sensitive data (`userId`, `email`, `password`, `JWT`). Tags are restricted to static, bounded strings (`service.operation`, `event.type`).
+

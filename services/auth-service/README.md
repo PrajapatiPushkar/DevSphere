@@ -13,6 +13,7 @@ The Auth Service is the dedicated microservice responsible for managing user ide
 
 ## Observability & Custom Metrics
 - **Prometheus Metrics Endpoint**: `/actuator/prometheus`
+- **Distributed Tracing (`devsphere-auth-service`)**: Micrometer Tracing + OpenTelemetry bridge (`micrometer-tracing-bridge-otel`), OTLP exporter (`http://localhost:4318/v1/traces`), custom business spans (`auth.registration`, `auth.login`, `outbox.publish`), log MDC correlation, and W3C trace header propagation into Kafka record headers.
 - **Custom Business Metrics**:
   - `devsphere_auth_registration_total{status="success|failure"}`
   - `devsphere_auth_login_total{status="success|failure"}`
@@ -26,7 +27,7 @@ The Auth Service is the dedicated microservice responsible for managing user ide
 ## Technology Stack
 - **Java**: 21
 - **Framework**: Spring Boot 3.2.5
-- **Observability**: Spring Boot Actuator, Micrometer Prometheus (`micrometer-registry-prometheus`)
+- **Observability**: Spring Boot Actuator, Micrometer Prometheus, Micrometer Tracing OpenTelemetry Bridge (`micrometer-tracing-bridge-otel`), OpenTelemetry OTLP Exporter (`opentelemetry-exporter-otlp`)
 - **Cloud Config**: Spring Cloud Config Client (`spring-cloud-starter-config`)
 - **Security & Tokens**: Spring Security Crypto, JJWT (`io.jsonwebtoken:jjwt-api:0.12.5`)
 - **Persistence**: Spring Data JPA, Hibernate, MySQL

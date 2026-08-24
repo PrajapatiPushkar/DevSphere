@@ -13,3 +13,11 @@ eureka:
     fetch-registry: false
     service-url:
       defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+
+management:
+  opentelemetry:
+    resource-attributes:
+      service.name: devsphere-service-discovery
+      service.version: 0.0.1-SNAPSHOT
+      deployment.environment: ${SPRING_PROFILES_ACTIVE:development}
+

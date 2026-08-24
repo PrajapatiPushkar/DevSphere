@@ -15,6 +15,7 @@ The API Gateway serves as the single external entry point and perimeter security
 - Reactive Spring Cloud Gateway bootstrap on port `8080`.
 - Centralized configuration import from Spring Cloud Config Server (`http://localhost:8888`).
 - Dynamic discovery-based routing via Netflix Eureka (`lb://DEVSPHERE-AUTH-SERVICE`, `lb://DEVSPHERE-USER-SERVICE`).
+- Distributed Tracing (`devsphere-api-gateway`): OpenTelemetry Micrometer Tracing integration, W3C `traceparent` header propagation, and OTLP export (`http://localhost:4318/v1/traces`).
 - Reactive JWT signature (HS256) & expiration validation.
 - Role extraction from JWT claims (`roles: ["USER"]` / `["ADMIN"]`).
 - Coarse route authorization (e.g. enforcing `ROLE_ADMIN` on `/api/v1/admin/**` routes).

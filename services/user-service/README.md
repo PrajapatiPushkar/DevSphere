@@ -28,6 +28,7 @@ Kafka Topic (devsphere.user.v1) ──► Consumer ──[Idempotency & Retries]
 ## Observability & Custom Metrics
 
 - **Prometheus Metrics Endpoint**: `/actuator/prometheus`
+- **Distributed Tracing (`devsphere-user-service`)**: Micrometer Tracing + OpenTelemetry bridge (`micrometer-tracing-bridge-otel`), OTLP exporter (`http://localhost:4318/v1/traces`), custom business spans (`user.profile.get`, `user.profile.create`, `user.profile.update`, `kafka.user-registered.process`), log MDC correlation, and W3C trace context extraction from incoming Kafka record headers.
 - **Custom Business & Resilience Metrics**:
   - `devsphere_kafka_events_processed_total{event_type="UserRegisteredEvent",status="success|duplicate|failure"}`
   - `devsphere_kafka_duplicate_events_total{event_type="UserRegisteredEvent"}`

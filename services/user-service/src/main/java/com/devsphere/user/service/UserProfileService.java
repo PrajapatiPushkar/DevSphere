@@ -7,6 +7,8 @@ import com.devsphere.user.entity.UserProfile;
 import com.devsphere.user.repository.UserProfileRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.tracing.ScopedSpan;
+import io.micrometer.tracing.Tracer;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,18 +24,27 @@ public class UserProfileService {
     private final UserProfileRepository userProfileRepository;
     private final UserProfileCache userProfileCache;
     private final MeterRegistry meterRegistry;
+    private final Tracer tracer;
 
     public UserProfileService(UserProfileRepository userProfileRepository, UserProfileCache userProfileCache) {
-        this(userProfileRepository, userProfileCache, new SimpleMeterRegistry());
+        this(userProfileRepository, userProfileCache, new SimpleMeterRegistry(), null);
     }
 
-    @Autowired
     public UserProfileService(UserProfileRepository userProfileRepository,
                               UserProfileCache userProfileCache,
                               MeterRegistry meterRegistry) {
+        this(userProfileRepository, userProfileCache, meterRegistry, null);
+    }
+
+    @Autowired(required = false)
+    public UserProfileService(UserProfileRepository userProfileRepository,
+                              UserProfileCache userProfileCache,
+                              MeterRegistry meterRegistry,
+                              Tracer tracer) {
         this.userProfileRepository = userProfileRepository;
         this.userProfileCache = userProfileCache;
         this.meterRegistry = meterRegistry;
+        this.tracer = tracer;
     }
 
     @Transactional
@@ -42,25 +53,51 @@ public class UserProfileService {
             throw new IllegalArgumentException("User ID must not be null");
         }
 
-        log.info("User profile requested for userId: {}", userId);
-
-        Optional<UserProfileResponse> cached = userProfileCache.get(userId);
-        if (cached.isPresent()) {
-            return cached.get();
+        ScopedSpan span = tracer != null ? tracer.startScopedSpan("user.profile.get") : null;
+        if (span != null) {
+            span.tag("service.operation", "getOrCreateProfile");
         }
 
-        UserProfile profile = userProfileRepository.findByUserId(userId)
-                .orElseGet(() -> {
-                    log.info("User profile lazily created for userId: {}", userId);
-                    UserProfile newProfile = new UserProfile(userId);
-                    meterRegistry.counter("devsphere.user.profile.created.total", "source", "http").increment();
-                    return userProfileRepository.save(newProfile);
-                });
+        try {
+            log.info("User profile requested for userId: {}", userId);
 
-        UserProfileResponse response = mapToResponse(profile);
-        userProfileCache.put(userId, response);
+            Optional<UserProfileResponse> cached = userProfileCache.get(userId);
+            if (cached.isPresent()) {
+                return cached.get();
+            }
 
-        return response;
+            UserProfile profile = userProfileRepository.findByUserId(userId)
+                    .orElseGet(() -> {
+                        ScopedSpan createSpan = tracer != null ? tracer.startScopedSpan("user.profile.create") : null;
+                        if (createSpan != null) {
+                            createSpan.tag("service.operation", "createProfile");
+                        }
+                        try {
+                            log.info("User profile lazily created for userId: {}", userId);
+                            UserProfile newProfile = new UserProfile(userId);
+                            meterRegistry.counter("devsphere.user.profile.created.total", "source", "http").increment();
+                            return userProfileRepository.save(newProfile);
+                        } finally {
+                            if (createSpan != null) {
+                                createSpan.end();
+                            }
+                        }
+                    });
+
+            UserProfileResponse response = mapToResponse(profile);
+            userProfileCache.put(userId, response);
+
+            return response;
+        } catch (Exception e) {
+            if (span != null) {
+                span.error(e);
+            }
+            throw e;
+        } finally {
+            if (span != null) {
+                span.end();
+            }
+        }
     }
 
     @Transactional
@@ -69,28 +106,44 @@ public class UserProfileService {
             throw new IllegalArgumentException("User ID must not be null");
         }
 
-        log.info("User profile update requested for userId: {}", userId);
+        ScopedSpan span = tracer != null ? tracer.startScopedSpan("user.profile.update") : null;
+        if (span != null) {
+            span.tag("service.operation", "updateProfile");
+        }
 
-        UserProfile profile = userProfileRepository.findByUserId(userId)
-                .orElseGet(() -> {
-                    log.info("User profile lazily created during update for userId: {}", userId);
-                    meterRegistry.counter("devsphere.user.profile.created.total", "source", "http").increment();
-                    return new UserProfile(userId);
-                });
+        try {
+            log.info("User profile update requested for userId: {}", userId);
 
-        profile.setFirstName(request.getFirstName());
-        profile.setLastName(request.getLastName());
-        profile.setDisplayName(request.getDisplayName());
-        profile.setBio(request.getBio());
-        profile.setPhoneNumber(request.getPhoneNumber());
+            UserProfile profile = userProfileRepository.findByUserId(userId)
+                    .orElseGet(() -> {
+                        log.info("User profile lazily created during update for userId: {}", userId);
+                        meterRegistry.counter("devsphere.user.profile.created.total", "source", "http").increment();
+                        return new UserProfile(userId);
+                    });
 
-        UserProfile savedProfile = userProfileRepository.save(profile);
-        log.info("User profile updated successfully in database for userId: {}", userId);
+            profile.setFirstName(request.getFirstName());
+            profile.setLastName(request.getLastName());
+            profile.setDisplayName(request.getDisplayName());
+            profile.setBio(request.getBio());
+            profile.setPhoneNumber(request.getPhoneNumber());
 
-        UserProfileResponse response = mapToResponse(savedProfile);
-        userProfileCache.evict(userId);
+            UserProfile savedProfile = userProfileRepository.save(profile);
+            log.info("User profile updated successfully in database for userId: {}", userId);
 
-        return response;
+            UserProfileResponse response = mapToResponse(savedProfile);
+            userProfileCache.evict(userId);
+
+            return response;
+        } catch (Exception e) {
+            if (span != null) {
+                span.error(e);
+            }
+            throw e;
+        } finally {
+            if (span != null) {
+                span.end();
+            }
+        }
     }
 
     private UserProfileResponse mapToResponse(UserProfile entity) {
@@ -106,3 +159,4 @@ public class UserProfileService {
         );
     }
 }
+

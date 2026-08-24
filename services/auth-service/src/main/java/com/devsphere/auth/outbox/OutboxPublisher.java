@@ -5,6 +5,8 @@ import com.devsphere.auth.event.UserRegisteredEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.micrometer.tracing.ScopedSpan;
+import io.micrometer.tracing.Tracer;
 import java.time.Instant;
 import java.util.List;
 import org.slf4j.Logger;
@@ -26,6 +28,7 @@ public class OutboxPublisher {
     private final KafkaTemplate<String, UserRegisteredEvent> kafkaTemplate;
     private final ObjectMapper objectMapper;
     private final MeterRegistry meterRegistry;
+    private final Tracer tracer;
     private final int batchSize;
     private final int maxRetries;
 
@@ -35,10 +38,9 @@ public class OutboxPublisher {
             ObjectMapper objectMapper,
             @Value("${app.outbox.batch-size:50}") int batchSize,
             @Value("${app.outbox.max-retries:5}") int maxRetries) {
-        this(outboxEventRepository, kafkaTemplate, objectMapper, new SimpleMeterRegistry(), batchSize, maxRetries);
+        this(outboxEventRepository, kafkaTemplate, objectMapper, new SimpleMeterRegistry(), null, batchSize, maxRetries);
     }
 
-    @Autowired
     public OutboxPublisher(
             OutboxEventRepository outboxEventRepository,
             KafkaTemplate<String, UserRegisteredEvent> kafkaTemplate,
@@ -46,10 +48,23 @@ public class OutboxPublisher {
             MeterRegistry meterRegistry,
             @Value("${app.outbox.batch-size:50}") int batchSize,
             @Value("${app.outbox.max-retries:5}") int maxRetries) {
+        this(outboxEventRepository, kafkaTemplate, objectMapper, meterRegistry, null, batchSize, maxRetries);
+    }
+
+    @Autowired(required = false)
+    public OutboxPublisher(
+            OutboxEventRepository outboxEventRepository,
+            KafkaTemplate<String, UserRegisteredEvent> kafkaTemplate,
+            ObjectMapper objectMapper,
+            MeterRegistry meterRegistry,
+            Tracer tracer,
+            @Value("${app.outbox.batch-size:50}") int batchSize,
+            @Value("${app.outbox.max-retries:5}") int maxRetries) {
         this.outboxEventRepository = outboxEventRepository;
         this.kafkaTemplate = kafkaTemplate;
         this.objectMapper = objectMapper;
         this.meterRegistry = meterRegistry;
+        this.tracer = tracer;
         this.batchSize = batchSize;
         this.maxRetries = maxRetries;
     }
@@ -71,6 +86,11 @@ public class OutboxPublisher {
     }
 
     public void processEvent(OutboxEvent event) {
+        ScopedSpan span = tracer != null ? tracer.startScopedSpan("outbox.publish") : null;
+        if (span != null) {
+            span.tag("event.type", event.getEventType() != null ? event.getEventType() : "UserRegisteredEvent");
+            span.tag("service.operation", "outbox.publish");
+        }
         try {
             UserRegisteredEvent payload = objectMapper.readValue(event.getPayload(), UserRegisteredEvent.class);
             String messageKey = event.getAggregateId();
@@ -86,7 +106,14 @@ public class OutboxPublisher {
                         }
                     });
         } catch (Exception e) {
+            if (span != null) {
+                span.error(e);
+            }
             handleFailure(event, e);
+        } finally {
+            if (span != null) {
+                span.end();
+            }
         }
     }
 
@@ -117,3 +144,4 @@ public class OutboxPublisher {
         outboxEventRepository.save(event);
     }
 }
+

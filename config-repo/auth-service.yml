@@ -37,6 +37,13 @@ app:
     batch-size: 50
     max-retries: 5
 
+management:
+  opentelemetry:
+    resource-attributes:
+      service.name: devsphere-auth-service
+      service.version: 0.0.1-SNAPSHOT
+      deployment.environment: ${SPRING_PROFILES_ACTIVE:development}
+
 resilience4j:
   bulkhead:
     instances:
