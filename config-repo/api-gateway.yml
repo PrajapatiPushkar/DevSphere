@@ -1,42 +1,29 @@
 server:
-  port: 0
+  port: 8080
 
 spring:
   application:
-    name: DEVSPHERE-API-GATEWAY-TEST
+    name: DEVSPHERE-API-GATEWAY
+
   cloud:
-    config:
-      enabled: false
     gateway:
       routes:
+        # Auth Service Route (Public Registration & Login via Discovery)
         - id: auth-service-route
           uri: lb://DEVSPHERE-AUTH-SERVICE
           predicates:
             - Path=/api/v1/auth/**
 
+        # User Service Route (Protected User Profiles via Discovery)
         - id: user-service-route
           uri: lb://DEVSPHERE-USER-SERVICE
           predicates:
             - Path=/api/v1/users/**
 
+        # Temporary Verification Route (Lesson 3 / Lesson 6 Verification Stub)
         - id: temporary-demo-route
           uri: http://localhost:8081
           predicates:
             - Path=/api/demo/**
           filters:
             - RewritePath=/api/demo/(?<segment>.*), /internal/demo/$\{segment}
-
-eureka:
-  client:
-    enabled: false
-    register-with-eureka: false
-    fetch-registry: false
-
-jwt:
-  secret: devsphere-super-secret-jwt-signing-key-for-local-development-must-be-at-least-256-bits-long
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health

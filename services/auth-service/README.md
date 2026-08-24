@@ -6,12 +6,13 @@ The Auth Service is the dedicated microservice responsible for managing user ide
 ---
 
 ## Current Status
-> **Service Discovery & Transactional Outbox Pattern (Lesson 10 & Lesson 12)**  
-> The Auth Service registers as a Eureka client (`DEVSPHERE-AUTH-SERVICE`) for dynamic service discovery. User registration (`POST /api/v1/auth/register`) persists credentials (`users`) and domain events (`outbox_events`) atomically. A background worker (`OutboxPublisher`) polls outbox events and dispatches them to Apache Kafka (`devsphere.user.v1`).
+> **Centralized Configuration, Service Discovery & Transactional Outbox Pattern (Lesson 13)**  
+> The Auth Service consumes non-secret centralized configuration from Spring Cloud Config Server (`http://localhost:8888`), registers as a Eureka client (`DEVSPHERE-AUTH-SERVICE`), and manages user registration (`POST /api/v1/auth/register`) by persisting credentials (`users`) and domain events (`outbox_events`) atomically. A background worker (`OutboxPublisher`) polls outbox events and dispatches them to Apache Kafka (`devsphere.user.v1`).
 
 ---
 
 ## Responsibilities
+- Centralized configuration import from Spring Cloud Config Server (`spring.config.import=configserver:http://localhost:8888`).
 - User account creation and identity registration.
 - Service discovery client registration (`DEVSPHERE-AUTH-SERVICE` on port `8081`).
 - BCrypt password hashing (`BCryptPasswordEncoder`).
@@ -21,12 +22,12 @@ The Auth Service is the dedicated microservice responsible for managing user ide
 - Bounded retries and failure handling for event publishing.
 - Exposing service health metrics via Spring Boot Actuator (`/actuator/health`).
 
-
 ---
 
 ## Technology Stack
 - **Java**: 21
 - **Framework**: Spring Boot 3.2.5
+- **Cloud Config**: Spring Cloud Config Client (`spring-cloud-starter-config`)
 - **Security & Tokens**: Spring Security Crypto, JJWT (`io.jsonwebtoken:jjwt-api:0.12.5`)
 - **Persistence**: Spring Data JPA, Hibernate, MySQL
 - **Database Migrations**: Flyway (`flyway-core`, `flyway-mysql`)
@@ -65,6 +66,8 @@ POST /api/v1/auth/register
 | `JWT_SECRET` | HS256 Secret (Min 32 chars / 256 bits) | *Development fallback* |
 | `JWT_EXPIRATION_SECONDS` | Token lifespan in seconds | `3600` (1 hour) |
 | `KAFKA_BOOTSTRAP_SERVERS` | Kafka Brokers | `localhost:9092` |
+| `CONFIG_SERVER_URL` | Config Server URL | `http://localhost:8888` |
+| `EUREKA_SERVER_URL` | Netflix Eureka Server URL | `http://localhost:8761/eureka/` |
 
 ---
 

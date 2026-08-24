@@ -1,24 +1,5 @@
-server:
-  port: 8761
-
 spring:
   application:
     name: DEVSPHERE-SERVICE-DISCOVERY
-
-eureka:
-  instance:
-    hostname: localhost
-  client:
-    register-with-eureka: false
-    fetch-registry: false
-    service-url:
-      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health
-  endpoint:
-    health:
-      show-details: always
+  config:
+    import: optional:configserver:http://localhost:8888

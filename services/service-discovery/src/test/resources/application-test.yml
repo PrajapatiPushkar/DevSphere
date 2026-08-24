@@ -4,6 +4,8 @@ server:
 spring:
   application:
     name: DEVSPHERE-SERVICE-DISCOVERY-TEST
+  config:
+    import: ""
 
 eureka:
   instance:

@@ -1,17 +1,15 @@
 server:
-  port: 0
+  port: 8082
 
 spring:
   application:
-    name: user-service-test
-  config:
-    import: ""
+    name: DEVSPHERE-USER-SERVICE
 
   datasource:
-    url: jdbc:h2:mem:devsphere_user_test;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
-    username: sa
-    password: 
-    driver-class-name: org.h2.Driver
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:devsphere_user}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
     hibernate:
@@ -19,23 +17,18 @@ spring:
     show-sql: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
+        dialect: org.hibernate.dialect.MySQLDialect
 
   flyway:
     enabled: true
     locations: classpath:db/migration
 
   kafka:
-    bootstrap-servers: ${spring.embedded.kafka.brokers:localhost:9092}
-    admin:
-      auto-create: false
-    listener:
-      auto-startup: false
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
     consumer:
-      group-id: devsphere-user-service-test
+      group-id: devsphere-user-service
       auto-offset-reset: earliest
       key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
@@ -48,14 +41,11 @@ spring:
 
   data:
     redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
       repositories:
         enabled: false
-
-eureka:
-  client:
-    enabled: false
-    register-with-eureka: false
-    fetch-registry: false
 
 app:
   kafka:
@@ -66,10 +56,6 @@ app:
     user-profile-ttl: 5m
 
 management:
-  endpoints:
-    web:
-      exposure:
-        include: health
   health:
     redis:
       enabled: false
