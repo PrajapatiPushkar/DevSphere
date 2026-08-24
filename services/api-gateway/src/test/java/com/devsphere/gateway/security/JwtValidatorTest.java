@@ -71,4 +71,18 @@ class JwtValidatorTest {
         assertThatThrownBy(() -> jwtValidator.validateAndParseToken(tamperedToken))
                 .isInstanceOf(Exception.class);
     }
+
+    @Test
+    @DisplayName("Should extract roles from JWT claims list or string")
+    void extractRolesFromClaims() {
+        String tokenWithList = Jwts.builder()
+                .subject("42")
+                .claim("roles", java.util.List.of("ADMIN", "USER"))
+                .signWith(key)
+                .compact();
+
+        Claims claims = jwtValidator.validateAndParseToken(tokenWithList);
+        java.util.List<String> roles = jwtValidator.extractRoles(claims);
+        assertThat(roles).containsExactly("ADMIN", "USER");
+    }
 }

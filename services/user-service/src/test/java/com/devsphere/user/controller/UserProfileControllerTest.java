@@ -24,7 +24,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(UserProfileController.class)
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+
+@WebMvcTest(value = UserProfileController.class, excludeAutoConfiguration = {SecurityAutoConfiguration.class})
 @Import(GlobalExceptionHandler.class)
 class UserProfileControllerTest {
 
@@ -36,6 +38,12 @@ class UserProfileControllerTest {
 
     @MockBean
     private UserProfileService userProfileService;
+
+    @MockBean(name = "userSecurity")
+    private com.devsphere.user.security.UserSecurity userSecurity;
+
+    @MockBean
+    private com.devsphere.user.security.JwtValidator jwtValidator;
 
     @Test
     void getMyProfile_withValidAuthHeader_returns200AndProfile() throws Exception {

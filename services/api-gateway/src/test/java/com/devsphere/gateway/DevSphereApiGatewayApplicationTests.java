@@ -168,4 +168,27 @@ class DevSphereApiGatewayApplicationTests {
                 .expectBody()
                 .jsonPath("$.code").isEqualTo("UNAUTHORIZED");
     }
+
+    @Test
+    @DisplayName("Admin route /api/v1/users/admin/summary with USER role returns 403 Forbidden")
+    void adminRouteWithUserRoleReturns403() {
+        String userToken = Jwts.builder()
+                .subject("100")
+                .claim("email", "user@example.com")
+                .claim("roles", java.util.List.of("USER"))
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + 3600000))
+                .signWith(key)
+                .compact();
+
+        webTestClient.get()
+                .uri("/api/v1/users/admin/summary")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + userToken)
+                .exchange()
+                .expectStatus().isForbidden()
+                .expectBody()
+                .jsonPath("$.status").isEqualTo(403)
+                .jsonPath("$.error").isEqualTo("FORBIDDEN")
+                .jsonPath("$.code").isEqualTo("FORBIDDEN");
+    }
 }

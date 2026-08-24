@@ -6,6 +6,7 @@ import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
+import java.util.List;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -33,12 +34,23 @@ public class JwtService {
     }
 
     public String generateToken(Long userId, String email) {
+        return generateToken(userId, email, List.of("USER"));
+    }
+
+    public String generateToken(Long userId, String email, String role) {
+        return generateToken(userId, email, List.of(role != null && !role.isBlank() ? role : "USER"));
+    }
+
+    public String generateToken(Long userId, String email, List<String> roles) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + (expirationSeconds * 1000));
+
+        List<String> effectiveRoles = (roles != null && !roles.isEmpty()) ? roles : List.of("USER");
 
         return Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim("email", email)
+                .claim("roles", effectiveRoles)
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(key)

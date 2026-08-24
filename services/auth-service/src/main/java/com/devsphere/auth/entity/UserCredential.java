@@ -25,6 +25,9 @@ public class UserCredential {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
+    @Column(name = "role", nullable = false)
+    private String role = "USER";
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -35,8 +38,13 @@ public class UserCredential {
     }
 
     public UserCredential(String email, String passwordHash) {
+        this(email, passwordHash, "USER");
+    }
+
+    public UserCredential(String email, String passwordHash, String role) {
         this.email = email;
         this.passwordHash = passwordHash;
+        this.role = (role != null && !role.isBlank()) ? role : "USER";
     }
 
     @PrePersist
@@ -73,6 +81,14 @@ public class UserCredential {
 
     public void setPasswordHash(String passwordHash) {
         this.passwordHash = passwordHash;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
     }
 
     public Instant getCreatedAt() {

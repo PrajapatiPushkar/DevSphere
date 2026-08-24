@@ -25,12 +25,26 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(UnauthorizedException.class)
-    public ResponseEntity<Map<String, String>> handleUnauthorized(UnauthorizedException ex) {
+    public ResponseEntity<Map<String, Object>> handleUnauthorized(UnauthorizedException ex) {
         log.warn("Unauthorized request: {}", ex.getMessage());
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(Map.of(
+                        "status", 401,
+                        "error", "UNAUTHORIZED",
                         "code", ex.getCode(),
                         "message", ex.getMessage()
+                ));
+    }
+
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDenied(org.springframework.security.access.AccessDeniedException ex) {
+        log.warn("Access denied in User Service: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of(
+                        "status", 403,
+                        "error", "FORBIDDEN",
+                        "code", "FORBIDDEN",
+                        "message", "You do not have permission to access this resource"
                 ));
     }
 

@@ -6,8 +6,15 @@ The Auth Service is the dedicated microservice responsible for managing user ide
 ---
 
 ## Current Status
-> **Observability Foundation, Centralized Config, Service Discovery & Outbox Pattern (Lesson 14)**  
-> The Auth Service exposes Prometheus application and business metrics (`/actuator/prometheus`), consumes non-secret centralized configuration from Spring Cloud Config Server (`http://localhost:8888`), registers as a Eureka client (`DEVSPHERE-AUTH-SERVICE`), and manages user registration (`POST /api/v1/auth/register`) by persisting credentials (`users`) and domain events (`outbox_events`) atomically.
+> **Production Authorization & Role-Based Access Control (Lesson 15)**  
+> The Auth Service assigns server-controlled roles (`USER`, `ADMIN`), prevents public self-registration as `ADMIN`, incorporates role authorization claims (`roles: ["USER"]`) into signed JWT tokens, safely seeds an initial local development admin user (`admin@devsphere.local`), exposes Prometheus application metrics (`/actuator/prometheus`), registers as a Eureka client (`DEVSPHERE-AUTH-SERVICE`), and publishes outbox events atomically.
+
+---
+
+## Authorization & Role Model
+- **USER Role**: Default role assigned server-side to all publicly registered users.
+- **ADMIN Role**: Assigned to administrative accounts via controlled initializer (`AdminUserInitializer` for local dev/testing).
+- **JWT Claims**: Tokens include `sub` (userId), `email`, and `roles` (`["USER"]` or `["ADMIN"]`). Tokens NEVER contain passwords, password hashes, or secrets.
 
 ---
 
@@ -16,6 +23,7 @@ The Auth Service is the dedicated microservice responsible for managing user ide
 - **Custom Business Metrics**:
   - `devsphere_auth_registration_total{status="success|failure"}`
   - `devsphere_auth_login_total{status="success|failure"}`
+  - `devsphere_auth_authorization_denied_total{reason="unauthenticated|forbidden"}`
   - `devsphere_outbox_events_published_total{event_type="UserRegisteredEvent",status="success|failed"}`
   - `devsphere_outbox_publish_failures_total{event_type="UserRegisteredEvent"}`
 

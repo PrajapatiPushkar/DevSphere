@@ -36,8 +36,21 @@ class JwtServiceTest {
 
         assertThat(claims.getSubject()).isEqualTo("42");
         assertThat(claims.get("email", String.class)).isEqualTo("jwtuser@example.com");
+        assertThat(claims.get("roles")).isNotNull();
         assertThat(claims.getIssuedAt()).isBeforeOrEqualTo(new Date());
         assertThat(claims.getExpiration()).isAfter(new Date());
+    }
+
+    @Test
+    @DisplayName("Should include roles claim for USER and ADMIN roles")
+    void generateTokenWithRoles() {
+        String userToken = jwtService.generateToken(1L, "user@example.com", "USER");
+        Claims userClaims = jwtService.parseToken(userToken);
+        assertThat(userClaims.get("roles")).isEqualTo(java.util.List.of("USER"));
+
+        String adminToken = jwtService.generateToken(2L, "admin@example.com", "ADMIN");
+        Claims adminClaims = jwtService.parseToken(adminToken);
+        assertThat(adminClaims.get("roles")).isEqualTo(java.util.List.of("ADMIN"));
     }
 
     @Test

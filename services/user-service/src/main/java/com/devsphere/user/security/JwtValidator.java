@@ -1,4 +1,4 @@
-package com.devsphere.gateway.security;
+package com.devsphere.user.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -6,8 +6,12 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -16,7 +20,8 @@ public class JwtValidator {
     private final String secret;
     private SecretKey key;
 
-    public JwtValidator(@Value("${jwt.secret:${JWT_SECRET:devsphere-super-secret-jwt-signing-key-for-local-development-must-be-at-least-256-bits-long}}") String secret) {
+    public JwtValidator(
+            @Value("${jwt.secret:${JWT_SECRET:devsphere-super-secret-jwt-signing-key-for-local-development-must-be-at-least-256-bits-long}}") String secret) {
         this.secret = secret;
     }
 
@@ -37,16 +42,34 @@ public class JwtValidator {
     }
 
     @SuppressWarnings("unchecked")
-    public java.util.List<String> extractRoles(Claims claims) {
+    public List<GrantedAuthority> extractAuthorities(Claims claims) {
+        List<GrantedAuthority> authorities = new ArrayList<>();
         if (claims == null) {
-            return java.util.List.of();
+            return authorities;
         }
+
         Object rolesObj = claims.get("roles");
-        if (rolesObj instanceof java.util.List<?> list) {
-            return list.stream().map(Object::toString).toList();
+        List<String> roleStrings = new ArrayList<>();
+
+        if (rolesObj instanceof List<?> list) {
+            for (Object obj : list) {
+                if (obj != null) {
+                    roleStrings.add(obj.toString());
+                }
+            }
         } else if (rolesObj instanceof String roleStr) {
-            return java.util.List.of(roleStr);
+            roleStrings.add(roleStr);
         }
-        return java.util.List.of("USER");
+
+        if (roleStrings.isEmpty()) {
+            roleStrings.add("USER");
+        }
+
+        for (String role : roleStrings) {
+            String authorityName = role.startsWith("ROLE_") ? role : "ROLE_" + role;
+            authorities.add(new SimpleGrantedAuthority(authorityName));
+        }
+
+        return authorities;
     }
 }

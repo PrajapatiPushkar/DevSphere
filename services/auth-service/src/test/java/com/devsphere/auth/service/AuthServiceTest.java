@@ -80,6 +80,7 @@ class AuthServiceTest {
 
         assertThat(captured.getEmail()).isEqualTo("testuser@example.com");
         assertThat(captured.getPasswordHash()).isEqualTo(hashedPassword);
+        assertThat(captured.getRole()).isEqualTo("USER");
 
         verify(outboxService).saveUserRegisteredOutboxEvent(1L);
     }
@@ -117,6 +118,7 @@ class AuthServiceTest {
         var claims = jwtService.parseToken(response.getAccessToken());
         assertThat(claims.getSubject()).isEqualTo("42");
         assertThat(claims.get("email", String.class)).isEqualTo("user@example.com");
+        assertThat(claims.get("roles")).isEqualTo(java.util.List.of("USER"));
     }
 
     @Test

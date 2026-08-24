@@ -56,7 +56,7 @@ public class AuthService {
             }
 
             String hashedPassword = passwordEncoder.encode(request.getPassword());
-            UserCredential credential = new UserCredential(normalizedEmail, hashedPassword);
+            UserCredential credential = new UserCredential(normalizedEmail, hashedPassword, "USER");
             UserCredential savedCredential = userCredentialRepository.save(credential);
 
             outboxService.saveUserRegisteredOutboxEvent(savedCredential.getId());
@@ -86,7 +86,7 @@ public class AuthService {
                 throw new InvalidCredentialsException("Invalid email or password");
             }
 
-            String token = jwtService.generateToken(credential.getId(), credential.getEmail());
+            String token = jwtService.generateToken(credential.getId(), credential.getEmail(), credential.getRole());
             meterRegistry.counter("devsphere.auth.login.total", "status", "success").increment();
             return new LoginResponse(token, jwtService.getExpirationSeconds());
         } catch (Exception e) {
