@@ -46,6 +46,11 @@ pnpm-debug.log*
 *.key
 *.p12
 *.crt
+secret.yaml
+secrets.yaml
+!secret.example.yaml
+!secrets.example.yaml
+
 
 # Do NOT ignore environment template files
 !.env.example

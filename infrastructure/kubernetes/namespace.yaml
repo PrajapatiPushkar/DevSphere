@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: devsphere
+  labels:
+    app.kubernetes.io/name: devsphere
+    app.kubernetes.io/part-of: devsphere

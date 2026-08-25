@@ -8,7 +8,8 @@ DevSphere is a developer career and productivity platform designed to help devel
 
 🚧 **Under Active Development**
 
-DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 20** are complete:
+DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 21** are complete:
+- **Kubernetes Deployment Foundation (Lesson 21)**: Implemented declarative Kubernetes deployment manifests ([`infrastructure/kubernetes/`](file:///infrastructure/kubernetes)), dedicated `devsphere` namespace, ClusterIP service internal DNS networking (`<service>.devsphere.svc.cluster.local`), decoupled `ConfigMap` configuration, `secret.example.yaml` template, hardened non-root container security contexts (`runAsNonRoot: true`, `readOnlyRootFilesystem: true`, dropped capabilities), Spring Boot Actuator liveness/readiness/startup probes, `RollingUpdate` deployment strategy (`maxUnavailable: 0`, `maxSurge: 1`), CPU/memory requests and limits, Kustomize base structure, and Kubernetes architecture documentation (`docs/architecture/kubernetes-foundation.md`).
 - **Container Registry & Continuous Delivery Foundation (Lesson 20)**: Implemented automated GitHub Container Registry (GHCR) Continuous Delivery pipeline ([`.github/workflows/cd.yml`](file:///.github/workflows/cd.yml)), multi-service container image publishing (`ghcr.io/<owner>/devsphere-<service>`), immutable SHA-based image tagging (`sha-<short-sha>` & `${GITHUB_SHA}`), semantic version release tagging (`v1.0.0`), pull-request publish protection, `GITHUB_TOKEN` least-privilege authentication (`packages: write`), cryptographic image digest (`sha256:...`) logging, automated `release-manifest.json` generation, build-once-promote-many architecture, and CD architecture documentation (`docs/architecture/container-registry-cd.md`).
 - **Production CI/CD Pipeline & Quality Gates (Lesson 19)**: Implemented automated GitHub Actions workflow (`.github/workflows/ci.yml`), pull request and main branch quality gates, Java 21 environment standardization, multi-service Maven matrix execution (`api-gateway`, `auth-service`, `user-service`, `service-discovery`, `config-server`), Maven dependency caching, OWASP dependency security vulnerability auditing, repository secret protection checks, multi-stage non-root Docker builds (`devsphere/<service>:${GITHUB_SHA}` validation), Surefire/Failsafe test report artifacts, and CI architecture documentation (`docs/architecture/ci-cd.md`).
 - **Distributed Rate Limiting & API Protection (Lesson 18)**: Implemented distributed Redis-backed token-bucket rate limiting (`rate_limit:*`) at the API Gateway layer (`DEVSPHERE-API-GATEWAY`). Enforced authenticated identity keys (`rate_limit:user:{userId}`), public client IP keys (`rate_limit:ip:{ip}`), strict login and registration protection (`POST /api/v1/auth/login`, `POST /api/v1/auth/register`), standard HTTP 429 JSON responses with `Retry-After` headers, configurable fail-open/fail-closed Redis error policies (`app.rate-limit.fail-open`), bounded Redis timeouts, low-cardinality Prometheus metrics (`devsphere_rate_limit_requests_total`, `devsphere_rate_limit_rejected_total`), and OpenTelemetry trace span correlation (`rate_limit.result`).
@@ -56,6 +57,35 @@ DevSphere is progressing through its incremental milestone lessons. **Lessons 1 
                     └──────────┘       ┌─────────────┐
                                        │ Microservices│
                                        └─────────────┘
+```
+
+---
+
+## Kubernetes Deployment Architecture
+
+```
+                    GitHub Container Registry (GHCR)
+                                │
+                                ▼
+                       Immutable Images
+                                │
+                                ▼
+                      Kubernetes Namespace
+                          (devsphere)
+                                │
+   ┌────────────────────┬───────┴────────────┬────────────────────┐
+   │                    │                    │                    │
+   ▼                    ▼                    ▼                    ▼
+API Gateway         Auth Service        User Service       Control Plane
+ (:8080)              (:8081)              (:8082)        (Config / Eureka)
+   │                    │                    │
+   └────────────────────┼────────────────────┘
+                        │
+                        ▼
+           External Infrastructure Layer
+            - MySQL Database Cluster
+            - Apache Kafka Message Broker
+            - Redis Distributed Cache
 ```
 
 ---
@@ -114,11 +144,13 @@ DevSphere is progressing through its incremental milestone lessons. **Lessons 1 
 - **Lesson 18**: Distributed Rate Limiting and API Protection *(Completed)*
 - **Lesson 19**: Production CI/CD Pipeline and Quality Gates *(Completed)*
 - **Lesson 20**: Container Registry and Continuous Delivery Foundation *(Completed)*
+- **Lesson 21**: Kubernetes Deployment Foundation *(Completed)*
 
 ---
 
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
+
 
 

@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: devsphere
+
+commonLabels:
+  app.kubernetes.io/part-of: devsphere
+  app.kubernetes.io/managed-by: kustomize
+
+resources:
+  - namespace.yaml
+  - config/configmap.yaml
+  - config-server/deployment.yaml
+  - config-server/service.yaml
+  - service-discovery/deployment.yaml
+  - service-discovery/service.yaml
+  - auth/deployment.yaml
+  - auth/service.yaml
+  - user/deployment.yaml
+  - user/service.yaml
+  - gateway/deployment.yaml
+  - gateway/service.yaml
