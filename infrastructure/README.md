@@ -14,29 +14,29 @@ This directory contains the infrastructure, container runtime configurations, mo
 
 ---
 
-## Deployment Architecture
+## Deployment & Perimeter Architecture
 
 ```
-                    GitHub Container Registry (GHCR)
+                       Internet / Public HTTPS
                                 │
                                 ▼
-                       Immutable Images
+              [Kubernetes Ingress (devsphere-ingress)]
                                 │
                                 ▼
-                      Kubernetes Namespace
-                          (devsphere)
+                       devsphere-api-gateway
+                         (ClusterIP :8080)
                                 │
    ┌────────────────────┬───────┴────────────┬────────────────────┐
    │                    │                    │                    │
    ▼                    ▼                    ▼                    ▼
-API Gateway         Auth Service        User Service       Control Plane
- (:8080)              (:8081)              (:8082)        (Config / Eureka)
-   │                    │                    │
-   └────────────────────┼────────────────────┘
-                        │
-                        ▼
-           External Infrastructure Layer
-            - MySQL Database Cluster
-            - Apache Kafka Message Broker
-            - Redis Distributed Cache
+Auth Service        User Service       Config Server      Service Discovery
+(ClusterIP :8081)    (ClusterIP :8082)   (ClusterIP :8888)  (ClusterIP :8761)
+   │                    │
+   └────────────────────┼────────────────────┐
+                        │                    │
+                        ▼                    ▼
+             External Database        Async Message Broker
+              - MySQL Cluster           - Apache Kafka
+              - Redis Cache
 ```
+

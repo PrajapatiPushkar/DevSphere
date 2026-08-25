@@ -48,8 +48,12 @@ pnpm-debug.log*
 *.crt
 secret.yaml
 secrets.yaml
+tls-secret.yaml
+tls.yaml
 !secret.example.yaml
 !secrets.example.yaml
+!tls-secret.example.yaml
+
 
 
 # Do NOT ignore environment template files

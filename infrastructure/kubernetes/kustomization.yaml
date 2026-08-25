@@ -20,3 +20,5 @@ resources:
   - user/service.yaml
   - gateway/deployment.yaml
   - gateway/service.yaml
+  - gateway/ingress.yaml
+
