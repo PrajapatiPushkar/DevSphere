@@ -8,7 +8,8 @@ DevSphere is a developer career and productivity platform designed to help devel
 
 🚧 **Under Active Development**
 
-DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 22** are complete:
+DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 23** are complete:
+- **Kubernetes Security Hardening & Network Isolation (Lesson 23)**: Implemented dedicated workload ServiceAccounts ([`security/serviceaccounts.yaml`](file:///infrastructure/kubernetes/security/serviceaccounts.yaml)) with disabled API token mounting (`automountServiceAccountToken: false`), zero Kubernetes RBAC bindings, Pod Security Admission `restricted` namespace enforcement ([`namespace.yaml`](file:///infrastructure/kubernetes/namespace.yaml)), hardened pod security contexts (`runAsNonRoot: true`, `10001:10001`, `readOnlyRootFilesystem: true`, dropped capabilities `ALL`, `seccompProfile: RuntimeDefault`), namespace-wide `default-deny-all` NetworkPolicy ([`networking/default-deny.yaml`](file:///infrastructure/kubernetes/networking/default-deny.yaml)), DNS egress resolution policy ([`networking/allow-dns.yaml`](file:///infrastructure/kubernetes/networking/allow-dns.yaml)), controlled east-west traffic flow policies between Gateway, Auth, User, Config Server, and Eureka, restricted external infrastructure egress (Kafka, Redis, MySQL), secret externalization, ADR 0022 ([`docs/decisions/0022-kubernetes-security-hardening.md`](file:///docs/decisions/0022-kubernetes-security-hardening.md)), and Kubernetes security architecture documentation ([`docs/architecture/kubernetes-security.md`](file:///docs/architecture/kubernetes-security.md)).
 - **Kubernetes Ingress, TLS & External Access Foundation (Lesson 22)**: Implemented Kubernetes Ingress resource ([`infrastructure/kubernetes/gateway/ingress.yaml`](file:///infrastructure/kubernetes/gateway/ingress.yaml)) for API Gateway perimeter exposure, host-based routing (`api.devsphere.example.com`), TLS termination referencing secret `devsphere-api-tls`, template `tls-secret.example.yaml`, HTTP to HTTPS SSL redirects, forwarded header propagation (`X-Forwarded-For`, `X-Forwarded-Proto`, `traceparent`), strict downstream microservice `ClusterIP` isolation, internal Actuator endpoint protection, and Ingress architecture documentation (`docs/architecture/kubernetes-ingress.md`).
 - **Kubernetes Deployment Foundation (Lesson 21)**: Implemented declarative Kubernetes deployment manifests ([`infrastructure/kubernetes/`](file:///infrastructure/kubernetes)), dedicated `devsphere` namespace, ClusterIP service internal DNS networking (`<service>.devsphere.svc.cluster.local`), decoupled `ConfigMap` configuration, `secret.example.yaml` template, hardened non-root container security contexts (`runAsNonRoot: true`, `readOnlyRootFilesystem: true`, dropped capabilities), Spring Boot Actuator liveness/readiness/startup probes, `RollingUpdate` deployment strategy (`maxUnavailable: 0`, `maxSurge: 1`), CPU/memory requests and limits, Kustomize base structure, and Kubernetes architecture documentation (`docs/architecture/kubernetes-foundation.md`).
 - **Container Registry & Continuous Delivery Foundation (Lesson 20)**: Implemented automated GitHub Container Registry (GHCR) Continuous Delivery pipeline ([`.github/workflows/cd.yml`](file:///.github/workflows/cd.yml)), multi-service container image publishing (`ghcr.io/<owner>/devsphere-<service>`), immutable SHA-based image tagging (`sha-<short-sha>` & `${GITHUB_SHA}`), semantic version release tagging (`v1.0.0`), pull-request publish protection, `GITHUB_TOKEN` least-privilege authentication (`packages: write`), cryptographic image digest (`sha256:...`) logging, automated `release-manifest.json` generation, build-once-promote-many architecture, and CD architecture documentation (`docs/architecture/container-registry-cd.md`).
@@ -62,7 +63,7 @@ DevSphere is progressing through its incremental milestone lessons. **Lessons 1 
 
 ---
 
-## Kubernetes Deployment & Ingress Architecture
+## Kubernetes Deployment, Ingress & Security Architecture
 
 ```
                        Internet / Public HTTPS
@@ -70,14 +71,15 @@ DevSphere is progressing through its incremental milestone lessons. **Lessons 1 
                                 ▼
               [Kubernetes Ingress (devsphere-ingress)]
                                 │
-                                ▼
+                                ▼ (NetworkPolicy port 8080)
                        devsphere-api-gateway
-                         (ClusterIP :8080)
+                   (SA: devsphere-api-gateway)
                                 │
    ┌────────────────────┬───────┴────────────┬────────────────────┐
    │                    │                    │                    │
    ▼                    ▼                    ▼                    ▼
 Auth Service        User Service       Config Server      Service Discovery
+(SA: auth-service)  (SA: user-service)  (SA: config-srvr)  (SA: discovery)
 (ClusterIP :8081)    (ClusterIP :8082)   (ClusterIP :8888)  (ClusterIP :8761)
    │                    │
    └────────────────────┼────────────────────┐
@@ -146,6 +148,7 @@ Auth Service        User Service       Config Server      Service Discovery
 - **Lesson 20**: Container Registry and Continuous Delivery Foundation *(Completed)*
 - **Lesson 21**: Kubernetes Deployment Foundation *(Completed)*
 - **Lesson 22**: Kubernetes Ingress, TLS and External Access Foundation *(Completed)*
+- **Lesson 23**: Kubernetes Security Hardening and Network Isolation *(Completed)*
 
 ---
 

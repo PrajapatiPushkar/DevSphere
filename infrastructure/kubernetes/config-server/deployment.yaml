@@ -24,6 +24,7 @@ spec:
         app.kubernetes.io/component: config-server
         app.kubernetes.io/part-of: devsphere
     spec:
+      serviceAccountName: devsphere-config-server
       automountServiceAccountToken: false
       terminationGracePeriodSeconds: 30
       securityContext:
@@ -31,6 +32,8 @@ spec:
         runAsUser: 10001
         runAsGroup: 10001
         fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: config-server
           image: ghcr.io/OWNER/devsphere-config-server:latest
