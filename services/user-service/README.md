@@ -41,9 +41,19 @@ Kafka Topic (devsphere.user.v1) ──► Consumer ──[Idempotency & Retries]
 
 ---
 
+## Container Registry Image
+
+Published to GitHub Container Registry (GHCR):
+- **Image URI**: `ghcr.io/<repository-owner>/devsphere-user-service`
+- **Primary Tags**: `${GITHUB_SHA}`, `sha-<short-sha>`, `v1.0.0`
+- **Local Build**: `docker build -t devsphere/user-service:local services/user-service`
+
+---
+
 ## Running Tests
 
 ```powershell
 # Run unit and integration tests
 mvn test
 ```
+

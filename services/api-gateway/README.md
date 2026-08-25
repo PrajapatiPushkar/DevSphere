@@ -63,9 +63,19 @@ The API Gateway serves as the single external entry point and perimeter security
 
 ---
 
+## Container Registry Image
+
+Published to GitHub Container Registry (GHCR):
+- **Image URI**: `ghcr.io/<repository-owner>/devsphere-api-gateway`
+- **Primary Tags**: `${GITHUB_SHA}`, `sha-<short-sha>`, `v1.0.0`
+- **Local Build**: `docker build -t devsphere/api-gateway:local services/api-gateway`
+
+---
+
 ## Running Automated Tests
 
 ```bash
 cd services/api-gateway
 mvn test
 ```
+

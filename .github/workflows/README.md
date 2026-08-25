@@ -1,76 +1,72 @@
 # DevSphere CI/CD Workflows
 
-This directory contains the GitHub Actions workflows and quality gates for the **DevSphere** microservices platform.
+This directory contains the GitHub Actions workflows, quality gates, and Continuous Delivery pipelines for the **DevSphere** microservices platform.
 
 ---
 
 ## Workflow Overview
 
-| Workflow | File | Description | Triggers |
-| :--- | :--- | :--- | :--- |
-| **DevSphere Production CI/CD Pipeline** | [`ci.yml`](file:///.github/workflows/ci.yml) | Validates code compilation, unit/integration tests, dependency security, repository secret protection, and multi-stage Docker image builds. | `push` to `main`, `pull_request` to `main` |
+| Workflow | File | Purpose | Triggers | Artifacts Generated |
+| :--- | :--- | :--- | :--- | :--- |
+| **Production CI Pipeline** | [`ci.yml`](file:///.github/workflows/ci.yml) | Validates code compilation, unit/integration tests, dependency security, secret protection, and Docker buildability. | `push` to `main`, `pull_request` to `main` | Test Reports (`surefire-reports`, `failsafe-reports`), JAR Binaries |
+| **Container CD Pipeline** | [`cd.yml`](file:///.github/workflows/cd.yml) | Compiles, builds, and publishes immutable container images to GitHub Container Registry (GHCR) with digest capture. | `push` to `main`, `push` of tags `v*` | Service Image Metadata, `release-manifest.json` |
 
 ---
 
-## Pipeline Architecture & Stages
+## CI vs CD Architecture
 
 ```
-                  +-----------------------------------+
-                  |           GitHub Trigger          |
-                  | (push: main / pull_request: main) |
-                  +-----------------+-----------------+
-                                    |
-                  +-----------------v-----------------+
-                  |   Repository & Secret Protection  |
-                  |  - Target directory check         |
-                  |  - Secret key scan (.env, .pem)   |
-                  |  - Config-repo inspection         |
-                  |  - Java 21 POM verification       |
-                  +--------+-----------------+--------+
-                           |                 |
-         +-----------------+                 +-----------------+
-         |                                                     |
-+--------v-------------------------+         +-----------------v------------------+
-| Service Matrix Build & Test      |         | Dependency Vulnerability Audit     |
-| - api-gateway                    |         | - OWASP Dependency-Check           |
-| - auth-service                   |         | - CVSS threshold verification      |
-| - user-service                   |         +------------------------------------+
-| - service-discovery              |
-| - config-server                  |
-| - mvn clean verify               |
-| - Test Report Artifact Upload    |
-| - Jar Build Artifact Upload      |
-+--------+-------------------------+
-         |
-+--------v-------------------------+
-| Docker Build Validation          |
-| - Multi-stage image build        |
-| - Tag: devsphere/<service>:${SHA}|
-| - push: false (validation only)  |
-+----------------------------------+
+                                    +-----------------------------------+
+                                    |           GitHub Trigger          |
+                                    +-----------------+-----------------+
+                                                      |
+                                                      v
+                   +----------------------------------+----------------------------------+
+                   |                                                                     |
+         [Pull Request Trigger]                                                [Push to main / Tag v*]
+                   |                                                                     |
+                   v                                                                     v
+    +------------------------------+                                      +------------------------------+
+    |   ci.yml (Quality Gates)     |                                      |   cd.yml (Delivery Pipeline) |
+    | - Repository & Secret Scan   |                                      | - Authenticate GHCR          |
+    | - Java 21 POM Verification   |                                      | - Compile Service JAR        |
+    | - Maven Matrix Verify        |                                      | - Build Multi-Stage Image    |
+    | - OWASP Dependency Audit     |                                      | - Tag Immutable SHA / SemVer |
+    | - Docker Build Validation    |                                      | - Push to ghcr.io/<owner>/   |
+    |   (push: false)              |                                      | - Capture Image Digest       |
+    +------------------------------+                                      | - Generate Release Manifest  |
+                                                                          +------------------------------+
 ```
 
 ---
 
-## Matrix Strategy
+## GHCR Registry Naming & Tagging Policy
 
-To achieve isolated, parallel execution and clear defect isolation across microservices, the build job executes over a service matrix:
+Container images are published to **GitHub Container Registry (GHCR)** at `ghcr.io`:
 
-- `services/api-gateway`
-- `services/auth-service`
-- `services/user-service`
-- `services/service-discovery`
-- `services/config-server`
+```
+ghcr.io/<owner>/devsphere-api-gateway
+ghcr.io/<owner>/devsphere-auth-service
+ghcr.io/<owner>/devsphere-user-service
+ghcr.io/<owner>/devsphere-service-discovery
+ghcr.io/<owner>/devsphere-config-server
+```
 
-Each matrix runner executes `mvn clean verify` independently using **Java 21 (Temurin)** and GitHub Actions Maven dependency caching (`~/.m2/repository`).
+### Tagging Conventions:
+- **Git Commit SHA (Primary)**: `${GITHUB_SHA}` and `sha-<short-sha>` (e.g. `ghcr.io/prajapatipushkar/devsphere-auth-service:sha-7ab074f`).
+- **Semantic Version**: `v1.0.0`, `1.0.0`, `1.0` when a Git release tag matching `v*` is pushed.
+- **Mutable `latest` Tag**: Excluded as a primary release tag to guarantee deployment immutability.
 
 ---
 
-## Quality Gates & Verification Policies
+## Security & Publishing Policy
 
-1. **Compilation & Packaging**: Every microservice must compile without warnings/errors and produce a bootable Spring Boot JAR.
-2. **Automated Testing**: 100% of unit and integration tests must pass. Skipping tests (`-DskipTests`) is strictly forbidden in CI.
-3. **Secret Protection**: Scans workspace for unencrypted secrets, `.env` files, private `.pem`/`.key` files, or committed `target/` directories.
-4. **Dependency Security**: Scans dependencies with OWASP Dependency-Check to flag CVSS high/critical vulnerabilities.
-5. **Docker Image Buildability**: Validates multi-stage Dockerfile compilation for each microservice using non-root user execution (`devsphere`). Docker images are **not** pushed to external registries in Lesson 19.
-6. **Artifact Retention**: Test reports (`surefire-reports`, `failsafe-reports`) are retained for 14 days; successful build JARs are retained for 7 days.
+1. **Pull Request Safety**: Pull requests **never** publish images to GHCR.
+2. **Least Privilege**: The publish workflow uses minimal required scopes:
+   ```yaml
+   permissions:
+     contents: read
+     packages: write
+   ```
+3. **Authentication**: Authenticates securely using ephemeral `GITHUB_TOKEN` (`secrets.GITHUB_TOKEN`).
+4. **Machine-Readable Release Manifest**: Generates an aggregated `release-manifest.json` linking Git commit SHA, git ref, timestamp, image URIs, tags, and cryptographic SHA256 digests (`sha256:...`).

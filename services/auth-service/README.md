@@ -37,9 +37,19 @@ The Auth Service is the dedicated microservice responsible for managing user ide
 
 ---
 
+## Container Registry Image
+
+Published to GitHub Container Registry (GHCR):
+- **Image URI**: `ghcr.io/<repository-owner>/devsphere-auth-service`
+- **Primary Tags**: `${GITHUB_SHA}`, `sha-<short-sha>`, `v1.0.0`
+- **Local Build**: `docker build -t devsphere/auth-service:local services/auth-service`
+
+---
+
 ## Running Automated Tests
 
 ```bash
 cd services/auth-service
 mvn test
 ```
+

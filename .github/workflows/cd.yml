@@ -1,0 +1,150 @@
+name: DevSphere Container Delivery Pipeline
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish-container-images:
+    name: Build & Publish Container Image (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - api-gateway
+          - auth-service
+          - user-service
+          - service-discovery
+          - config-server
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Temurin) with Maven Cache
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Compile and Package Service (${{ matrix.service }})
+        run: |
+          cd services/${{ matrix.service }}
+          mvn clean package -DskipTests -B
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lowercase Repository Owner & Image Name
+        id: image_info
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE_NAME="ghcr.io/${OWNER}/devsphere-${{ matrix.service }}"
+          echo "image_name=${IMAGE_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Extract Docker Metadata (Tags & OCI Labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image_info.outputs.image_name }}
+          tags: |
+            type=sha,prefix=sha-,format=short
+            type=raw,value=${{ github.sha }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=ref,event=branch
+
+      - name: Build and Push Docker Image to GHCR
+        id: build_push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./services/${{ matrix.service }}
+          file: ./services/${{ matrix.service }}/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: true
+          sbom: true
+
+      - name: Record Image Digest Metadata
+        run: |
+          mkdir -p metadata/
+          cat <<EOF > metadata/${{ matrix.service }}.json
+          {
+            "service": "${{ matrix.service }}",
+            "image": "${{ steps.image_info.outputs.image_name }}",
+            "tag": "${{ github.sha }}",
+            "digest": "${{ steps.build_push.outputs.digest }}"
+          }
+          EOF
+
+      - name: Upload Service Image Metadata Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-metadata-${{ matrix.service }}
+          path: metadata/${{ matrix.service }}.json
+          retention-days: 7
+
+  generate-release-manifest:
+    name: Generate Deployment Release Manifest
+    runs-on: ubuntu-latest
+    needs: publish-container-images
+    steps:
+      - name: Download All Image Metadata Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: all-metadata
+          pattern: image-metadata-*
+          merge-multiple: true
+
+      - name: Construct Release Manifest JSON
+        run: |
+          mkdir -p artifacts
+          MANIFEST_FILE="artifacts/release-manifest.json"
+          
+          echo "{" > $MANIFEST_FILE
+          echo "  \"commit\": \"${{ github.sha }}\"," >> $MANIFEST_FILE
+          echo "  \"ref\": \"${{ github.ref }}\"," >> $MANIFEST_FILE
+          echo "  \"timestamp\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\"," >> $MANIFEST_FILE
+          echo "  \"images\": [" >> $MANIFEST_FILE
+          
+          FIRST=true
+          for file in all-metadata/*.json; do
+            if [ -f "$file" ]; then
+              if [ "$FIRST" = true ]; then
+                FIRST=false
+              else
+                echo "," >> $MANIFEST_FILE
+              fi
+              cat "$file" >> $MANIFEST_FILE
+            fi
+          done
+          
+          echo "" >> $MANIFEST_FILE
+          echo "  ]" >> $MANIFEST_FILE
+          echo "}" >> $MANIFEST_FILE
+          
+          echo "=== RELEASE MANIFEST ==="
+          cat $MANIFEST_FILE
+
+      - name: Upload Release Manifest Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-manifest-${{ github.sha }}
+          path: artifacts/release-manifest.json
+          retention-days: 30

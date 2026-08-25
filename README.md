@@ -8,7 +8,8 @@ DevSphere is a developer career and productivity platform designed to help devel
 
 🚧 **Under Active Development**
 
-DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 19** are complete:
+DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 20** are complete:
+- **Container Registry & Continuous Delivery Foundation (Lesson 20)**: Implemented automated GitHub Container Registry (GHCR) Continuous Delivery pipeline ([`.github/workflows/cd.yml`](file:///.github/workflows/cd.yml)), multi-service container image publishing (`ghcr.io/<owner>/devsphere-<service>`), immutable SHA-based image tagging (`sha-<short-sha>` & `${GITHUB_SHA}`), semantic version release tagging (`v1.0.0`), pull-request publish protection, `GITHUB_TOKEN` least-privilege authentication (`packages: write`), cryptographic image digest (`sha256:...`) logging, automated `release-manifest.json` generation, build-once-promote-many architecture, and CD architecture documentation (`docs/architecture/container-registry-cd.md`).
 - **Production CI/CD Pipeline & Quality Gates (Lesson 19)**: Implemented automated GitHub Actions workflow (`.github/workflows/ci.yml`), pull request and main branch quality gates, Java 21 environment standardization, multi-service Maven matrix execution (`api-gateway`, `auth-service`, `user-service`, `service-discovery`, `config-server`), Maven dependency caching, OWASP dependency security vulnerability auditing, repository secret protection checks, multi-stage non-root Docker builds (`devsphere/<service>:${GITHUB_SHA}` validation), Surefire/Failsafe test report artifacts, and CI architecture documentation (`docs/architecture/ci-cd.md`).
 - **Distributed Rate Limiting & API Protection (Lesson 18)**: Implemented distributed Redis-backed token-bucket rate limiting (`rate_limit:*`) at the API Gateway layer (`DEVSPHERE-API-GATEWAY`). Enforced authenticated identity keys (`rate_limit:user:{userId}`), public client IP keys (`rate_limit:ip:{ip}`), strict login and registration protection (`POST /api/v1/auth/login`, `POST /api/v1/auth/register`), standard HTTP 429 JSON responses with `Retry-After` headers, configurable fail-open/fail-closed Redis error policies (`app.rate-limit.fail-open`), bounded Redis timeouts, low-cardinality Prometheus metrics (`devsphere_rate_limit_requests_total`, `devsphere_rate_limit_rejected_total`), and OpenTelemetry trace span correlation (`rate_limit.result`).
 - **Distributed Tracing Foundation (Lesson 17)**: Integrated Micrometer Tracing with OpenTelemetry bridge (`micrometer-tracing-bridge-otel`) and OTLP exporter (`opentelemetry-exporter-otlp`), W3C Trace Context propagation (`traceparent`), HTTP request tracing across Gateway and microservices, asynchronous Kafka trace context propagation via message headers, custom domain business spans (`auth.registration`, `auth.login`, `outbox.publish`, `user.profile.get`, `user.profile.update`, `kafka.user-registered.process`), trace-log correlation in application logs, and configurable sampling probability.
@@ -59,29 +60,34 @@ DevSphere is progressing through its incremental milestone lessons. **Lessons 1 
 
 ---
 
-## CI/CD Pipeline Architecture
+## CI/CD Pipeline & Registry Architecture
 
 ```
                   +-----------------------------------+
-                  |      GitHub Actions Workflow      |
-                  |     (.github/workflows/ci.yml)    |
+                  |      GitHub Actions Workflows     |
                   +-----------------+-----------------+
                                     |
           +-------------------------+-------------------------+
-          |                         |                         |
-+---------v---------+     +---------v---------+     +---------v---------+
-| Repository Scan   |     | Maven Service     |     | Dependency        |
-| - Secrets         |     | Matrix Build      |     | Security Audit    |
-| - Target dirs     |     | - Java 21         |     | - OWASP           |
-| - Java 21 POMs    |     | - mvn verify      |     |   Dependency Check|
-+-------------------+     +---------+---------+     +-------------------+
-                                    |
-                          +---------v---------+
-                          | Docker Image      |
-                          | Validation        |
-                          | - Multi-stage     |
-                          | - Tagged SHA      |
-                          +-------------------+
+          |                                                   |
+[Pull Request: ci.yml]                                [Push main / Tag v*: cd.yml]
+          |                                                   |
++---------v---------+                               +---------v---------+
+| Quality Gates     |                               | Container Build   |
+| - Verify & Test   |                               | - Multi-stage     |
+| - Dependency Audit|                               | - Package JAR     |
+| - Secret Scan     |                               +---------+---------+
++-------------------+                                         |
+                                                    +---------v---------+
+                                                    | Push to GHCR      |
+                                                    | ghcr.io/<owner>/  |
+                                                    | devsphere-*       |
+                                                    +---------+---------+
+                                                              |
+                                                    +---------v---------+
+                                                    | Release Manifest  |
+                                                    | - SHA & Tags      |
+                                                    | - Image Digests   |
+                                                    +-------------------+
 ```
 
 ---
@@ -107,10 +113,12 @@ DevSphere is progressing through its incremental milestone lessons. **Lessons 1 
 - **Lesson 17**: Distributed Tracing Foundation with OpenTelemetry *(Completed)*
 - **Lesson 18**: Distributed Rate Limiting and API Protection *(Completed)*
 - **Lesson 19**: Production CI/CD Pipeline and Quality Gates *(Completed)*
+- **Lesson 20**: Container Registry and Continuous Delivery Foundation *(Completed)*
 
 ---
 
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
+
 
