@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/component: service-discovery
     app.kubernetes.io/part-of: devsphere
 spec:
-  replicas: 2
+  replicas: 1
   strategy:
     type: RollingUpdate
     rollingUpdate:

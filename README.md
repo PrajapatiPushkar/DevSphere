@@ -8,7 +8,8 @@ DevSphere is a developer career and productivity platform designed to help devel
 
 🚧 **Under Active Development**
 
-DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 23** are complete:
+DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 24** are complete:
+- **Kubernetes High Availability, Autoscaling & Workload Reliability (Lesson 24)**: Implemented `autoscaling/v2` Horizontal Pod Autoscalers ([`autoscaling/gateway-hpa.yaml`](file:///infrastructure/kubernetes/autoscaling/gateway-hpa.yaml)) for `api-gateway`, `auth-service`, and `user-service` (`minReplicas: 2`, `maxReplicas: 10`, CPU utilization `70%`, `15s` scaleUp and `300s` scaleDown stabilization), `policy/v1` PodDisruptionBudgets ([`availability/pdb.yaml`](file:///infrastructure/kubernetes/availability/pdb.yaml)) with `minAvailable: 1` for multi-replica workloads, `topologySpreadConstraints` across `topology.kubernetes.io/zone` and `kubernetes.io/hostname` (`maxSkew: 1`, `whenUnsatisfiable: ScheduleAnyway`), standalone replica evaluation for Eureka (`replicas: 1`), fixed startup HA for Config Server (`replicas: 2`), rolling update preservation (`maxUnavailable: 0`, `maxSurge: 1`), health probe guardrails, graceful shutdown (`terminationGracePeriodSeconds: 30`), ADR 0023 ([`docs/decisions/0023-kubernetes-high-availability.md`](file:///docs/decisions/0023-kubernetes-high-availability.md)), and High Availability architecture documentation ([`docs/architecture/kubernetes-high-availability.md`](file:///docs/architecture/kubernetes-high-availability.md)).
 - **Kubernetes Security Hardening & Network Isolation (Lesson 23)**: Implemented dedicated workload ServiceAccounts ([`security/serviceaccounts.yaml`](file:///infrastructure/kubernetes/security/serviceaccounts.yaml)) with disabled API token mounting (`automountServiceAccountToken: false`), zero Kubernetes RBAC bindings, Pod Security Admission `restricted` namespace enforcement ([`namespace.yaml`](file:///infrastructure/kubernetes/namespace.yaml)), hardened pod security contexts (`runAsNonRoot: true`, `10001:10001`, `readOnlyRootFilesystem: true`, dropped capabilities `ALL`, `seccompProfile: RuntimeDefault`), namespace-wide `default-deny-all` NetworkPolicy ([`networking/default-deny.yaml`](file:///infrastructure/kubernetes/networking/default-deny.yaml)), DNS egress resolution policy ([`networking/allow-dns.yaml`](file:///infrastructure/kubernetes/networking/allow-dns.yaml)), controlled east-west traffic flow policies between Gateway, Auth, User, Config Server, and Eureka, restricted external infrastructure egress (Kafka, Redis, MySQL), secret externalization, ADR 0022 ([`docs/decisions/0022-kubernetes-security-hardening.md`](file:///docs/decisions/0022-kubernetes-security-hardening.md)), and Kubernetes security architecture documentation ([`docs/architecture/kubernetes-security.md`](file:///docs/architecture/kubernetes-security.md)).
 - **Kubernetes Ingress, TLS & External Access Foundation (Lesson 22)**: Implemented Kubernetes Ingress resource ([`infrastructure/kubernetes/gateway/ingress.yaml`](file:///infrastructure/kubernetes/gateway/ingress.yaml)) for API Gateway perimeter exposure, host-based routing (`api.devsphere.example.com`), TLS termination referencing secret `devsphere-api-tls`, template `tls-secret.example.yaml`, HTTP to HTTPS SSL redirects, forwarded header propagation (`X-Forwarded-For`, `X-Forwarded-Proto`, `traceparent`), strict downstream microservice `ClusterIP` isolation, internal Actuator endpoint protection, and Ingress architecture documentation (`docs/architecture/kubernetes-ingress.md`).
 - **Kubernetes Deployment Foundation (Lesson 21)**: Implemented declarative Kubernetes deployment manifests ([`infrastructure/kubernetes/`](file:///infrastructure/kubernetes)), dedicated `devsphere` namespace, ClusterIP service internal DNS networking (`<service>.devsphere.svc.cluster.local`), decoupled `ConfigMap` configuration, `secret.example.yaml` template, hardened non-root container security contexts (`runAsNonRoot: true`, `readOnlyRootFilesystem: true`, dropped capabilities), Spring Boot Actuator liveness/readiness/startup probes, `RollingUpdate` deployment strategy (`maxUnavailable: 0`, `maxSurge: 1`), CPU/memory requests and limits, Kustomize base structure, and Kubernetes architecture documentation (`docs/architecture/kubernetes-foundation.md`).
@@ -63,7 +64,7 @@ DevSphere is progressing through its incremental milestone lessons. **Lessons 1 
 
 ---
 
-## Kubernetes Deployment, Ingress & Security Architecture
+## Kubernetes Deployment, Ingress, Security & HA Architecture
 
 ```
                        Internet / Public HTTPS
@@ -73,13 +74,13 @@ DevSphere is progressing through its incremental milestone lessons. **Lessons 1 
                                 │
                                 ▼ (NetworkPolicy port 8080)
                        devsphere-api-gateway
-                   (SA: devsphere-api-gateway)
+                   (HPA: 2-10 | PDB min: 1)
                                 │
    ┌────────────────────┬───────┴────────────┬────────────────────┐
    │                    │                    │                    │
    ▼                    ▼                    ▼                    ▼
 Auth Service        User Service       Config Server      Service Discovery
-(SA: auth-service)  (SA: user-service)  (SA: config-srvr)  (SA: discovery)
+(HPA: 2-10 | PDB: 1) (HPA: 2-10 | PDB: 1) (Fixed 2 | PDB: 1) (Fixed 1 | Standalone)
 (ClusterIP :8081)    (ClusterIP :8082)   (ClusterIP :8888)  (ClusterIP :8761)
    │                    │
    └────────────────────┼────────────────────┐
@@ -149,6 +150,7 @@ Auth Service        User Service       Config Server      Service Discovery
 - **Lesson 21**: Kubernetes Deployment Foundation *(Completed)*
 - **Lesson 22**: Kubernetes Ingress, TLS and External Access Foundation *(Completed)*
 - **Lesson 23**: Kubernetes Security Hardening and Network Isolation *(Completed)*
+- **Lesson 24**: Kubernetes High Availability, Autoscaling and Workload Reliability *(Completed)*
 
 ---
 

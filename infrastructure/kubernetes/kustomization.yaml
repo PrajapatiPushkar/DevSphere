@@ -31,4 +31,8 @@ resources:
   - networking/allow-config-server.yaml
   - networking/allow-service-discovery.yaml
   - networking/external-egress.yaml
+  - autoscaling/gateway-hpa.yaml
+  - autoscaling/auth-hpa.yaml
+  - autoscaling/user-hpa.yaml
+  - availability/pdb.yaml
 

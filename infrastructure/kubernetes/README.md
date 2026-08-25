@@ -1,6 +1,6 @@
-# DevSphere Kubernetes Deployment & Security Hardening Foundation
+# DevSphere Kubernetes Deployment, Security Hardening & High Availability Foundation
 
-This directory contains the production-grade Kubernetes deployment manifests, perimeter entry ingress specifications, and security hardening controls for the **DevSphere** microservices platform.
+This directory contains the production-grade Kubernetes deployment manifests, perimeter entry ingress specifications, security hardening controls, horizontal pod autoscalers, and disruption budgets for the **DevSphere** microservices platform.
 
 ---
 
@@ -12,6 +12,12 @@ infrastructure/kubernetes/
 ├── kustomization.yaml            # Kustomize base aggregation file
 ├── security/
 │   └── serviceaccounts.yaml      # Dedicated ServiceAccounts with automount token disabled
+├── autoscaling/
+│   ├── gateway-hpa.yaml          # HPA v2 for API Gateway (min 2, max 10, CPU 70%)
+│   ├── auth-hpa.yaml             # HPA v2 for Auth Service (min 2, max 10, CPU 70%)
+│   └── user-hpa.yaml             # HPA v2 for User Service (min 2, max 10, CPU 70%)
+├── availability/
+│   └── pdb.yaml                  # PodDisruptionBudgets (minAvailable: 1) for Gateway, Auth, User, Config
 ├── networking/
 │   ├── default-deny.yaml         # Namespace default-deny ingress & egress policy
 │   ├── allow-dns.yaml            # DNS egress resolution (port 53 UDP/TCP)
@@ -27,49 +33,39 @@ infrastructure/kubernetes/
 │   ├── secret.example.yaml       # Template for sensitive credentials (CHANGE_ME)
 │   └── tls-secret.example.yaml   # Template for TLS certificate/key (CHANGE_ME)
 ├── gateway/
-│   ├── deployment.yaml           # API Gateway deployment (Port 8080)
+│   ├── deployment.yaml           # API Gateway deployment (Port 8080, Replicas 2, TopologySpread)
 │   ├── service.yaml              # API Gateway ClusterIP Service
 │   └── ingress.yaml              # Kubernetes Ingress perimeter router
 ├── auth/
-│   ├── deployment.yaml           # Auth Service deployment (Port 8081)
+│   ├── deployment.yaml           # Auth Service deployment (Port 8081, Replicas 2, TopologySpread)
 │   └── service.yaml              # Auth Service ClusterIP Service
 ├── user/
-│   ├── deployment.yaml           # User Service deployment (Port 8082)
+│   ├── deployment.yaml           # User Service deployment (Port 8082, Replicas 2, TopologySpread)
 │   └── service.yaml              # User Service ClusterIP Service
 ├── config-server/
-│   ├── deployment.yaml           # Config Server deployment (Port 8888)
+│   ├── deployment.yaml           # Config Server deployment (Port 8888, Replicas 2, TopologySpread)
 │   └── service.yaml              # Config Server ClusterIP Service
 └── service-discovery/
-    ├── deployment.yaml           # Eureka Service Discovery deployment (Port 8761)
+    ├── deployment.yaml           # Eureka Service Discovery deployment (Port 8761, Replicas 1)
     └── service.yaml              # Eureka ClusterIP Service
 ```
 
 ---
 
-## Architecture & Security Hardening
+## Architecture, Security & High Availability Highlights
 
-1. **Dedicated Namespace & Pod Security Admission**: All workloads deploy into `devsphere` namespace enforcing `pod-security.kubernetes.io/enforce: restricted`.
-2. **Workload Identity Separation**: Dedicated ServiceAccounts ([`security/serviceaccounts.yaml`](file:///infrastructure/kubernetes/security/serviceaccounts.yaml)) for every microservice.
-3. **Zero Kubernetes API Exposure**: `automountServiceAccountToken: false` set on all ServiceAccounts/Deployments and zero Kubernetes RBAC permissions assigned.
-4. **Perimeter Ingress Routing**: Public HTTPS traffic (`api.devsphere.example.com`) routes through [`gateway/ingress.yaml`](file:///infrastructure/kubernetes/gateway/ingress.yaml) to `devsphere-api-gateway` (Port `8080`).
-5. **Strict Internal Service Isolation**: Downstream microservices (`auth-service`, `user-service`, `config-server`, `service-discovery`, Kafka, Redis, MySQL) remain strictly private `ClusterIP`-only services.
-6. **NetworkPolicy East-West Firewalling**:
-   - `default-deny-all`: Denies all ingress and egress traffic by default.
-   - `allow-dns-egress`: Allows DNS name resolution (port 53 UDP/TCP).
-   - Ingress controller restricted to API Gateway port 8080.
-   - Gateway allowed to call Auth (8081), User (8082), Config Server (8888), Eureka (8761), and Redis (6379).
-   - Auth & User allowed egress to Kafka (9092/29092), MySQL (3306), Redis (6379), Config Server (8888), and Eureka (8761).
-   - Direct pod-to-pod cross-talk between `auth-service` and `user-service` is denied.
-7. **Hardened Security Contexts**:
-   - `runAsNonRoot: true` (UID/GID `10001`)
-   - `allowPrivilegeEscalation: false`
-   - `readOnlyRootFilesystem: true` with ephemeral `/tmp` `emptyDir` mounts
-   - `capabilities: drop: [ALL]`
-   - `seccompProfile: { type: RuntimeDefault }`
-8. **Spring Boot Health Probes & Resilience**:
-   - Rolling update strategy: `RollingUpdate` (`maxUnavailable: 0`, `maxSurge: 1`)
-   - Graceful termination: `terminationGracePeriodSeconds: 30`
-   - Resource requests: `cpu: 250m`, `memory: 256Mi`; Limits: `cpu: 1000m`, `memory: 768Mi`
+1. **Horizontal Scaling Strategy**:
+   - `devsphere-api-gateway`: Replicas `2`, HPA `min: 2, max: 10`
+   - `devsphere-auth-service`: Replicas `2`, HPA `min: 2, max: 10`
+   - `devsphere-user-service`: Replicas `2`, HPA `min: 2, max: 10`
+   - `devsphere-config-server`: Replicas `2` (fixed, startup HA)
+   - `devsphere-service-discovery`: Replicas `1` (standalone Eureka mode without peer replication)
+2. **Horizontal Pod Autoscaling (HPA v2)**: CPU utilization target `70%` with `15s` scaleUp stabilization and `300s` scaleDown stabilization window.
+3. **Pod Disruption Budgets (PDB v1)**: `minAvailable: 1` configured in [`availability/pdb.yaml`](file:///infrastructure/kubernetes/availability/pdb.yaml) for multi-replica workloads.
+4. **Topology Spread Constraints**: Soft `maxSkew: 1` constraints on `topology.kubernetes.io/zone` and `kubernetes.io/hostname` with `whenUnsatisfiable: ScheduleAnyway`.
+5. **Zero-Downtime Rolling Updates**: `strategy: RollingUpdate` (`maxUnavailable: 0`, `maxSurge: 1`).
+6. **Workload Security & Identity**: Dedicated ServiceAccounts, disabled token automounting, zero RBAC, namespace `pod-security.kubernetes.io/enforce: restricted`, `runAsNonRoot: true`, `readOnlyRootFilesystem: true`, dropped capabilities (`ALL`), and `seccompProfile: RuntimeDefault`.
+7. **Perimeter Ingress & Network Isolation**: NGINX Ingress entry point with TLS termination (`devsphere-api-tls`) and `default-deny-all` east-west NetworkPolicies.
 
 ---
 
@@ -77,10 +73,6 @@ infrastructure/kubernetes/
 
 > [!CAUTION]
 > Never commit real secret files (`secret.yaml`, `tls-secret.yaml`, `*.key`, `*.crt`) to Git. Real secret files are strictly ignored by `.gitignore`.
-
-To configure local or staging secrets:
-1. Copy `config/secret.example.yaml` to `config/secret.yaml` and `config/tls-secret.example.yaml` to `config/tls-secret.yaml`.
-2. Replace `CHANGE_ME` placeholders with real Base64 encoded secrets.
 
 ---
 
@@ -90,28 +82,28 @@ Validate manifests via Kustomize or `kubectl`:
 
 ```bash
 # Validate Kustomize synthesis
-kustomize build infrastructure/kubernetes/
+kubectl kustomize infrastructure/kubernetes/
 
-# Validate dry-run client application
-kubectl apply --dry-run=client -k infrastructure/kubernetes/
+# Inspect HPA definitions
+kubectl get hpa -n devsphere
 
-# Verify ServiceAccount permission isolation (expected: no)
-kubectl auth can-i get pods --as=system:serviceaccount:devsphere:devsphere-auth-service -n devsphere
+# Inspect PodDisruptionBudgets
+kubectl get pdb -n devsphere
 ```
 
 ---
 
 ## Local Cluster Testing (Minikube / Docker Desktop / Kind)
 
-To apply workloads to a local development cluster:
-
 ```bash
 # Apply resources via Kustomize
 kubectl apply -k infrastructure/kubernetes/
 
-# Check status of deployed pods, services, network policies, and ingress
+# Check status of deployed pods, services, HPAs, PDBs, network policies, and ingress
 kubectl get pods -n devsphere
 kubectl get svc -n devsphere
+kubectl get hpa -n devsphere
+kubectl get pdb -n devsphere
 kubectl get netpol -n devsphere
 kubectl get ingress -n devsphere
 ```
