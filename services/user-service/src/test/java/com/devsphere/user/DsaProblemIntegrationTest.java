@@ -234,7 +234,7 @@ class DsaProblemIntegrationTest {
         assertThat(stats.getTotalTimeSpentMinutes()).isEqualTo(135);
         assertThat(stats.getTotalAttempts()).isEqualTo(2);
 
-        DailyDsaProgressResponse daily = dsaProblemService.getDailyProgress(userId, LocalDate.now());
+        DailyDsaProgressResponse daily = dsaProblemService.getDailyProgress(userId, java.time.LocalDate.now(java.time.ZoneOffset.UTC));
         assertThat(daily.getProblemsSolved()).isEqualTo(4);
     }
 }
