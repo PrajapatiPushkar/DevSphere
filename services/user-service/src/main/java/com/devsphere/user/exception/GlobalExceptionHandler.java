@@ -73,6 +73,16 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+    @ExceptionHandler(DuplicatePlannerEntryException.class)
+    public ResponseEntity<Map<String, String>> handleDuplicatePlannerEntry(DuplicatePlannerEntryException ex) {
+        log.warn("Duplicate planner entry: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of(
+                        "code", ex.getCode(),
+                        "message", ex.getMessage()
+                ));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGenericException(Exception ex) {
         log.error("Unhandled exception in User Service: {}", ex.getMessage(), ex);
