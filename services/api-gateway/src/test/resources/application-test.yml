@@ -49,7 +49,7 @@ spring:
         - id: user-service-route
           uri: lb://DEVSPHERE-USER-SERVICE
           predicates:
-            - Path=/api/v1/users/**, /api/v1/profile/**, /api/v1/goals/**, /api/v1/tasks/**, /api/v1/planner/**, /api/v1/dsa/**, /api/v1/projects/**
+            - Path=/api/v1/users/**, /api/v1/profile/**, /api/v1/goals/**, /api/v1/tasks/**, /api/v1/planner/**, /api/v1/dsa/**, /api/v1/projects/**, /api/v1/career-profile/**
           filters:
             - name: DistributedRateLimiter
               args:
