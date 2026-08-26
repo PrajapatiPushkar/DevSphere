@@ -83,6 +83,16 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+    @ExceptionHandler(DuplicateDsaProblemException.class)
+    public ResponseEntity<Map<String, String>> handleDuplicateDsaProblem(DuplicateDsaProblemException ex) {
+        log.warn("Duplicate DSA problem: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of(
+                        "code", ex.getCode(),
+                        "message", ex.getMessage()
+                ));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGenericException(Exception ex) {
         log.error("Unhandled exception in User Service: {}", ex.getMessage(), ex);
