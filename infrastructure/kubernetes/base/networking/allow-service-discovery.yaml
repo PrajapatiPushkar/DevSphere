@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-service-discovery
+  labels:
+    app.kubernetes.io/name: allow-service-discovery
+    app.kubernetes.io/part-of: devsphere
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: devsphere-service-discovery
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: devsphere
+      ports:
+        - protocol: TCP
+          port: 8761

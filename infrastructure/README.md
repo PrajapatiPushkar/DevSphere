@@ -1,6 +1,6 @@
 # DevSphere Infrastructure
 
-This directory contains the infrastructure, container runtime configurations, monitoring, network security, autoscaling, and orchestration specifications for the **DevSphere** platform.
+This directory contains the infrastructure, container runtime configurations, monitoring, network security, autoscaling, environment overlays, and orchestration specifications for the **DevSphere** platform.
 
 ---
 
@@ -9,40 +9,45 @@ This directory contains the infrastructure, container runtime configurations, mo
 | Component | Path | Description |
 | :--- | :--- | :--- |
 | **Docker Compose** | [`docker/`](file:///infrastructure/docker) | Docker Compose configurations for local development infrastructure dependencies (Kafka, Zookeeper, Redis). |
-| **Kubernetes** | [`kubernetes/`](file:///infrastructure/kubernetes) | Production-ready Kubernetes deployment manifests, ClusterIP services, ConfigMaps, Secret templates, ServiceAccounts, NetworkPolicies, HPAs, PDBs, and Kustomize base structure. |
+| **Kubernetes** | [`kubernetes/`](file:///infrastructure/kubernetes) | Production-ready Kubernetes deployment manifests, base resources, security controls, NetworkPolicies, HPAs, PDBs, and Kustomize environment overlays (`development`, `staging`, `production`). |
 | **Monitoring** | [`monitoring/`](file:///infrastructure/monitoring) | Prometheus scrape configurations (`prometheus.yml`) for microservice observability. |
 
 ---
 
-## Deployment, Perimeter, Security & High Availability Architecture
+## Environment Promotion & Kubernetes Architecture
 
 ```
-                       Internet / Public HTTPS
-                                │
-                                ▼
-              [Kubernetes Ingress (devsphere-ingress)]
-                                │
-                                ▼ (NetworkPolicy port 8080)
-                       devsphere-api-gateway
-                   (HPA: 2-10 | PDB min: 1)
-                                │
-   ┌────────────────────┬───────┴────────────┬────────────────────┐
-   │                    │                    │                    │
-   ▼                    ▼                    ▼                    ▼
-Auth Service        User Service       Config Server      Service Discovery
-(HPA: 2-10 | PDB: 1) (HPA: 2-10 | PDB: 1) (Fixed 2 | PDB: 1) (Fixed 1 | Standalone)
-(ClusterIP :8081)    (ClusterIP :8082)   (ClusterIP :8888)  (ClusterIP :8761)
-   │                    │
-   └────────────────────┼────────────────────┐
-                        │                    │
-                        ▼                    ▼
-             External Database        Async Message Broker
-              - MySQL Cluster           - Apache Kafka
-              - Redis Cache
+                    GitHub Commit
+                          │
+                          ▼
+              GitHub Actions CI Pipeline
+                          │
+                          ▼
+            Immutable Container Image (sha-<commit>)
+                          │
+                          ▼
+              GitHub Container Registry (GHCR)
+                          │
+       ┌──────────────────┼──────────────────┐
+       ▼                  ▼                  ▼
+  Development          Staging           Production
+ (devsphere-dev)  (devsphere-staging)    (devsphere)
+       │                  │                  │
+       ▼                  ▼                  ▼
+ Kustomize Dev     Kustomize Staging  Kustomize Prod
+   Overlay            Overlay            Overlay
+       │                  │                  │
+       └──────────────────┼──────────────────┘
+                          ▼
+                  Kubernetes Cluster
 ```
 
-### Security & Availability Highlights
-- **Horizontal Scaling & HPA v2**: CPU utilization target `70%` (`minReplicas: 2`, `maxReplicas: 10`) for Gateway, Auth, and User services.
+---
+
+## Kubernetes Layering & High Availability Highlights
+
+- **Kustomize Environment Overlays**: Shared base manifests with `development` (single-node local cluster, HPA/PDB disabled), `staging` (pre-prod release validation, HPA/PDB enabled, immutable SHA tags), and `production` (full HA, HPA 2–10, PDB `minAvailable: 1`, topology spreading, immutable SHA tags/digests).
+- **Horizontal Scaling & HPA v2**: CPU utilization target `70%` (`minReplicas: 2`, `maxReplicas: 10`) for Gateway, Auth, and User services in staging and production.
 - **Pod Disruption Protection**: `policy/v1` PDBs (`minAvailable: 1`) protecting multi-replica workloads from voluntary disruptions.
 - **Topology-Aware Scheduling**: `topologySpreadConstraints` across zones and hosts with `maxSkew: 1`.
 - **Least Privilege Identity**: Dedicated ServiceAccounts with `automountServiceAccountToken: false` and zero Kubernetes RBAC permissions.

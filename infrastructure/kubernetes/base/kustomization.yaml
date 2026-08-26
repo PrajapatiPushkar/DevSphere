@@ -1,0 +1,34 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+commonLabels:
+  app.kubernetes.io/part-of: devsphere
+  app.kubernetes.io/managed-by: kustomize
+
+resources:
+  - security/serviceaccounts.yaml
+  - config/configmap.yaml
+  - config-server/deployment.yaml
+  - config-server/service.yaml
+  - service-discovery/deployment.yaml
+  - service-discovery/service.yaml
+  - auth/deployment.yaml
+  - auth/service.yaml
+  - user/deployment.yaml
+  - user/service.yaml
+  - gateway/deployment.yaml
+  - gateway/service.yaml
+  - gateway/ingress.yaml
+  - networking/default-deny.yaml
+  - networking/allow-dns.yaml
+  - networking/allow-ingress-to-gateway.yaml
+  - networking/allow-gateway-to-services.yaml
+  - networking/allow-auth-service.yaml
+  - networking/allow-user-service.yaml
+  - networking/allow-config-server.yaml
+  - networking/allow-service-discovery.yaml
+  - networking/external-egress.yaml
+  - autoscaling/gateway-hpa.yaml
+  - autoscaling/auth-hpa.yaml
+  - autoscaling/user-hpa.yaml
+  - availability/pdb.yaml

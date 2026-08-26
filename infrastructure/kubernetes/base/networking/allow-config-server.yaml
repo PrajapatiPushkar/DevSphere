@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-config-server
+  labels:
+    app.kubernetes.io/name: allow-config-server
+    app.kubernetes.io/part-of: devsphere
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: devsphere-config-server
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: devsphere
+      ports:
+        - protocol: TCP
+          port: 8888

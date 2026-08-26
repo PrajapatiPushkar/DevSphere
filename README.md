@@ -8,119 +8,56 @@ DevSphere is a developer career and productivity platform designed to help devel
 
 🚧 **Under Active Development**
 
-DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 24** are complete:
-- **Kubernetes High Availability, Autoscaling & Workload Reliability (Lesson 24)**: Implemented `autoscaling/v2` Horizontal Pod Autoscalers ([`autoscaling/gateway-hpa.yaml`](file:///infrastructure/kubernetes/autoscaling/gateway-hpa.yaml)) for `api-gateway`, `auth-service`, and `user-service` (`minReplicas: 2`, `maxReplicas: 10`, CPU utilization `70%`, `15s` scaleUp and `300s` scaleDown stabilization), `policy/v1` PodDisruptionBudgets ([`availability/pdb.yaml`](file:///infrastructure/kubernetes/availability/pdb.yaml)) with `minAvailable: 1` for multi-replica workloads, `topologySpreadConstraints` across `topology.kubernetes.io/zone` and `kubernetes.io/hostname` (`maxSkew: 1`, `whenUnsatisfiable: ScheduleAnyway`), standalone replica evaluation for Eureka (`replicas: 1`), fixed startup HA for Config Server (`replicas: 2`), rolling update preservation (`maxUnavailable: 0`, `maxSurge: 1`), health probe guardrails, graceful shutdown (`terminationGracePeriodSeconds: 30`), ADR 0023 ([`docs/decisions/0023-kubernetes-high-availability.md`](file:///docs/decisions/0023-kubernetes-high-availability.md)), and High Availability architecture documentation ([`docs/architecture/kubernetes-high-availability.md`](file:///docs/architecture/kubernetes-high-availability.md)).
-- **Kubernetes Security Hardening & Network Isolation (Lesson 23)**: Implemented dedicated workload ServiceAccounts ([`security/serviceaccounts.yaml`](file:///infrastructure/kubernetes/security/serviceaccounts.yaml)) with disabled API token mounting (`automountServiceAccountToken: false`), zero Kubernetes RBAC bindings, Pod Security Admission `restricted` namespace enforcement ([`namespace.yaml`](file:///infrastructure/kubernetes/namespace.yaml)), hardened pod security contexts (`runAsNonRoot: true`, `10001:10001`, `readOnlyRootFilesystem: true`, dropped capabilities `ALL`, `seccompProfile: RuntimeDefault`), namespace-wide `default-deny-all` NetworkPolicy ([`networking/default-deny.yaml`](file:///infrastructure/kubernetes/networking/default-deny.yaml)), DNS egress resolution policy ([`networking/allow-dns.yaml`](file:///infrastructure/kubernetes/networking/allow-dns.yaml)), controlled east-west traffic flow policies between Gateway, Auth, User, Config Server, and Eureka, restricted external infrastructure egress (Kafka, Redis, MySQL), secret externalization, ADR 0022 ([`docs/decisions/0022-kubernetes-security-hardening.md`](file:///docs/decisions/0022-kubernetes-security-hardening.md)), and Kubernetes security architecture documentation ([`docs/architecture/kubernetes-security.md`](file:///docs/architecture/kubernetes-security.md)).
-- **Kubernetes Ingress, TLS & External Access Foundation (Lesson 22)**: Implemented Kubernetes Ingress resource ([`infrastructure/kubernetes/gateway/ingress.yaml`](file:///infrastructure/kubernetes/gateway/ingress.yaml)) for API Gateway perimeter exposure, host-based routing (`api.devsphere.example.com`), TLS termination referencing secret `devsphere-api-tls`, template `tls-secret.example.yaml`, HTTP to HTTPS SSL redirects, forwarded header propagation (`X-Forwarded-For`, `X-Forwarded-Proto`, `traceparent`), strict downstream microservice `ClusterIP` isolation, internal Actuator endpoint protection, and Ingress architecture documentation (`docs/architecture/kubernetes-ingress.md`).
-- **Kubernetes Deployment Foundation (Lesson 21)**: Implemented declarative Kubernetes deployment manifests ([`infrastructure/kubernetes/`](file:///infrastructure/kubernetes)), dedicated `devsphere` namespace, ClusterIP service internal DNS networking (`<service>.devsphere.svc.cluster.local`), decoupled `ConfigMap` configuration, `secret.example.yaml` template, hardened non-root container security contexts (`runAsNonRoot: true`, `readOnlyRootFilesystem: true`, dropped capabilities), Spring Boot Actuator liveness/readiness/startup probes, `RollingUpdate` deployment strategy (`maxUnavailable: 0`, `maxSurge: 1`), CPU/memory requests and limits, Kustomize base structure, and Kubernetes architecture documentation (`docs/architecture/kubernetes-foundation.md`).
+DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 25** are complete:
+- **Kubernetes Environment Overlays & Production Deployment Strategy (Lesson 25)**: Implemented Kustomize environment overlays ([`infrastructure/kubernetes/overlays/`](file:///infrastructure/kubernetes/overlays)) separating `development` (`devsphere-dev` namespace, host `api.devsphere.local`, HTTP, single-node local cluster compatible with HPA/PDB disabled), `staging` (`devsphere-staging` namespace, host `staging-api.devsphere.example.com`, HTTPS `devsphere-staging-api-tls`, immutable `sha-<commit>` image tags, HPA/PDB enabled), and `production` (`devsphere` namespace, host `api.devsphere.example.com`, HTTPS `devsphere-api-tls`, immutable SHA tags/digests, HPA/PDB enabled, topology spread preserved) from a shared declarative base ([`infrastructure/kubernetes/base/`](file:///infrastructure/kubernetes/base)). Enforced "Build Once, Promote Many" image promotion strategy, documented configuration ownership boundaries, rollback procedures, ADR 0024 ([`docs/decisions/0024-kubernetes-environment-strategy.md`](file:///docs/decisions/0024-kubernetes-environment-strategy.md)), and Kubernetes environment strategy documentation ([`docs/architecture/kubernetes-environment-strategy.md`](file:///docs/architecture/kubernetes-environment-strategy.md)).
+- **Kubernetes High Availability, Autoscaling & Workload Reliability (Lesson 24)**: Implemented `autoscaling/v2` Horizontal Pod Autoscalers for `api-gateway`, `auth-service`, and `user-service` (`minReplicas: 2`, `maxReplicas: 10`, CPU utilization `70%`), `policy/v1` PodDisruptionBudgets with `minAvailable: 1` for multi-replica workloads, `topologySpreadConstraints` across `topology.kubernetes.io/zone` and `kubernetes.io/hostname`, standalone replica evaluation for Eureka (`replicas: 1`), fixed startup HA for Config Server (`replicas: 2`), rolling update preservation (`maxUnavailable: 0`, `maxSurge: 1`), health probe guardrails, graceful shutdown (`terminationGracePeriodSeconds: 30`), ADR 0023 ([`docs/decisions/0023-kubernetes-high-availability.md`](file:///docs/decisions/0023-kubernetes-high-availability.md)), and High Availability architecture documentation ([`docs/architecture/kubernetes-high-availability.md`](file:///docs/architecture/kubernetes-high-availability.md)).
+- **Kubernetes Security Hardening & Network Isolation (Lesson 23)**: Implemented dedicated workload ServiceAccounts with disabled API token mounting (`automountServiceAccountToken: false`), zero Kubernetes RBAC bindings, Pod Security Admission `restricted` namespace enforcement, hardened pod security contexts (`runAsNonRoot: true`, `10001:10001`, `readOnlyRootFilesystem: true`, dropped capabilities `ALL`, `seccompProfile: RuntimeDefault`), namespace-wide `default-deny-all` NetworkPolicy, DNS egress resolution policy, controlled east-west traffic flow policies between Gateway, Auth, User, Config Server, and Eureka, restricted external infrastructure egress (Kafka, Redis, MySQL), secret externalization, ADR 0022 ([`docs/decisions/0022-kubernetes-security-hardening.md`](file:///docs/decisions/0022-kubernetes-security-hardening.md)), and Kubernetes security architecture documentation ([`docs/architecture/kubernetes-security.md`](file:///docs/architecture/kubernetes-security.md)).
+- **Kubernetes Ingress, TLS & External Access Foundation (Lesson 22)**: Implemented Kubernetes Ingress resource for API Gateway perimeter exposure, host-based routing (`api.devsphere.example.com`), TLS termination referencing secret `devsphere-api-tls`, template `tls-secret.example.yaml`, HTTP to HTTPS SSL redirects, forwarded header propagation (`X-Forwarded-For`, `X-Forwarded-Proto`, `traceparent`), strict downstream microservice `ClusterIP` isolation, internal Actuator endpoint protection, and Ingress architecture documentation (`docs/architecture/kubernetes-ingress.md`).
+- **Kubernetes Deployment Foundation (Lesson 21)**: Implemented declarative Kubernetes deployment manifests, dedicated `devsphere` namespace, ClusterIP service internal DNS networking (`<service>.devsphere.svc.cluster.local`), decoupled `ConfigMap` configuration, `secret.example.yaml` template, hardened non-root container security contexts (`runAsNonRoot: true`, `readOnlyRootFilesystem: true`, dropped capabilities), Spring Boot Actuator liveness/readiness/startup probes, `RollingUpdate` deployment strategy (`maxUnavailable: 0`, `maxSurge: 1`), CPU/memory requests and limits, Kustomize base structure, and Kubernetes architecture documentation (`docs/architecture/kubernetes-foundation.md`).
 - **Container Registry & Continuous Delivery Foundation (Lesson 20)**: Implemented automated GitHub Container Registry (GHCR) Continuous Delivery pipeline ([`.github/workflows/cd.yml`](file:///.github/workflows/cd.yml)), multi-service container image publishing (`ghcr.io/<owner>/devsphere-<service>`), immutable SHA-based image tagging (`sha-<short-sha>` & `${GITHUB_SHA}`), semantic version release tagging (`v1.0.0`), pull-request publish protection, `GITHUB_TOKEN` least-privilege authentication (`packages: write`), cryptographic image digest (`sha256:...`) logging, automated `release-manifest.json` generation, build-once-promote-many architecture, and CD architecture documentation (`docs/architecture/container-registry-cd.md`).
 - **Production CI/CD Pipeline & Quality Gates (Lesson 19)**: Implemented automated GitHub Actions workflow (`.github/workflows/ci.yml`), pull request and main branch quality gates, Java 21 environment standardization, multi-service Maven matrix execution (`api-gateway`, `auth-service`, `user-service`, `service-discovery`, `config-server`), Maven dependency caching, OWASP dependency security vulnerability auditing, repository secret protection checks, multi-stage non-root Docker builds (`devsphere/<service>:${GITHUB_SHA}` validation), Surefire/Failsafe test report artifacts, and CI architecture documentation (`docs/architecture/ci-cd.md`).
-- **Distributed Rate Limiting & API Protection (Lesson 18)**: Implemented distributed Redis-backed token-bucket rate limiting (`rate_limit:*`) at the API Gateway layer (`DEVSPHERE-API-GATEWAY`). Enforced authenticated identity keys (`rate_limit:user:{userId}`), public client IP keys (`rate_limit:ip:{ip}`), strict login and registration protection (`POST /api/v1/auth/login`, `POST /api/v1/auth/register`), standard HTTP 429 JSON responses with `Retry-After` headers, configurable fail-open/fail-closed Redis error policies (`app.rate-limit.fail-open`), bounded Redis timeouts, low-cardinality Prometheus metrics (`devsphere_rate_limit_requests_total`, `devsphere_rate_limit_rejected_total`), and OpenTelemetry trace span correlation (`rate_limit.result`).
-- **Distributed Tracing Foundation (Lesson 17)**: Integrated Micrometer Tracing with OpenTelemetry bridge (`micrometer-tracing-bridge-otel`) and OTLP exporter (`opentelemetry-exporter-otlp`), W3C Trace Context propagation (`traceparent`), HTTP request tracing across Gateway and microservices, asynchronous Kafka trace context propagation via message headers, custom domain business spans (`auth.registration`, `auth.login`, `outbox.publish`, `user.profile.get`, `user.profile.update`, `kafka.user-registered.process`), trace-log correlation in application logs, and configurable sampling probability.
-- **Production Resilience & Fault Tolerance (Lesson 16)**: Integrated Spring Cloud Circuit Breaker and Resilience4j bounded timeouts, selective retries, circuit breakers, bulkhead resource isolation, graceful HTTP 503 fallbacks, and failure classification while preserving non-idempotent registration write safety and Kafka consumer retry separation.
-- **Production Authorization & RBAC (Lesson 15)**: Integrated Role-Based Access Control (`USER`, `ADMIN`), server-controlled role assignment, JWT role claims (`roles: ["USER"]`), API Gateway perimeter route authorization, microservice-level independent JWT validation, resource ownership checks (`authenticatedUserId == targetUserId OR ROLE_ADMIN`), and standard 401 Unauthorized vs 403 Forbidden HTTP semantics.
-- **Production Observability Foundation** (`infrastructure/monitoring/prometheus.yml`): Standardized Spring Boot Actuator, Micrometer Prometheus metrics (`/actuator/prometheus`), JVM, HTTP, and low-cardinality custom business metrics.
-- **Config Server** (`services/config-server`, Port `8888`): Dedicated Spring Cloud Config Server backed by an independent local Git repository (`config-repo/`) providing centralized non-secret runtime configuration.
-- **Service Discovery** (`services/service-discovery`, Port `8761`): Standalone Netflix Eureka Service Discovery server maintaining an in-memory registry of all active microservice instances.
-- **API Gateway** (`services/api-gateway`, Port `8080`): Perimeter Gateway registered with Eureka (`DEVSPHERE-API-GATEWAY`), importing centralized configuration from Config Server, enforcing JWT validation (`HS256`), identity header propagation (`X-Authenticated-User-Id`), coarse route authorization, bounded timeouts, Resilience4j circuit breakers, and distributed rate limiting.
-- **Auth Service** (`services/auth-service`, Port `8081`): Authentication microservice registered with Eureka (`DEVSPHERE-AUTH-SERVICE`), owning user credentials (`devsphere_auth`), registration, server-side `USER` role assignment, password hashing, and atomic outbox event persistence (`outbox_events` table).
-- **User Service** (`services/user-service`, Port `8082`): User profile domain microservice registered with Eureka (`DEVSPHERE-USER-SERVICE`), enforcing independent Spring Security JWT validation, method-level security (`@PreAuthorize`), resource ownership checks, and graceful Redis cache-to-MySQL fallback.
+- **Distributed Rate Limiting & API Protection (Lesson 18)**: Implemented distributed Redis-backed token-bucket rate limiting at the API Gateway layer.
+- **Distributed Tracing Foundation (Lesson 17)**: Integrated Micrometer Tracing with OpenTelemetry bridge and OTLP exporter.
+- **Production Resilience & Fault Tolerance (Lesson 16)**: Integrated Spring Cloud Circuit Breaker and Resilience4j bounded timeouts, selective retries, circuit breakers, bulkhead resource isolation.
+- **Production Authorization & RBAC (Lesson 15)**: Integrated Role-Based Access Control (`USER`, `ADMIN`).
+- **Production Observability Foundation** (`infrastructure/monitoring/prometheus.yml`): Standardized Spring Boot Actuator, Micrometer Prometheus metrics.
+- **Config Server** (`services/config-server`, Port `8888`): Dedicated Spring Cloud Config Server.
+- **Service Discovery** (`services/service-discovery`, Port `8761`): Standalone Netflix Eureka Service Discovery server.
+- **API Gateway** (`services/api-gateway`, Port `8080`): Perimeter Gateway registered with Eureka (`DEVSPHERE-API-GATEWAY`).
+- **Auth Service** (`services/auth-service`, Port `8081`): Authentication microservice registered with Eureka (`DEVSPHERE-AUTH-SERVICE`).
+- **User Service** (`services/user-service`, Port `8082`): User profile domain microservice registered with Eureka (`DEVSPHERE-USER-SERVICE`).
 - **Apache Kafka**: Message broker enabling eventual-consistent asynchronous communication between microservices with DLT routing.
-- **Redis**: Distributed store providing high-performance, demand-driven caching for `User Service` profile reads (`user_profile:*`) and distributed rate limiting state (`rate_limit:*`) for `API Gateway`.
+- **Redis**: Distributed store providing high-performance, demand-driven caching and distributed rate limiting.
 - **Transactional Outbox Pattern**: Atomic database persistence of business entity and event records in `Auth Service`.
 
 ---
 
-## Architecture Diagram
+## Environment Promotion & Kubernetes Architecture
 
 ```
-                         ┌─────────────────┐
-                         │     Clients     │
-                         └────────┬────────┘
-                                  │
-                                  ▼
-                         ┌─────────────────┐
-                         │   API Gateway   │
-                         │                 │
-                         │ JWT Validation  │
-                         │ Rate Limiting   │
-                         │ RBAC            │
-                         │ Resilience      │
-                         └────────┬────────┘
-                                  │
-                         ┌────────┴────────┐
-                         │                 │
-                         ▼                 ▼
-                    ┌──────────┐      ┌──────────────┐
-                    │  Redis   │      │   Eureka     │
-                    │          │      │  Discovery   │
-                    │ Rate     │      └──────┬───────┘
-                    │ Limits   │             │
-                    │ + Cache  │             ▼
-                    └──────────┘       ┌─────────────┐
-                                       │ Microservices│
-                                       └─────────────┘
-```
-
----
-
-## Kubernetes Deployment, Ingress, Security & HA Architecture
-
-```
-                       Internet / Public HTTPS
-                                │
-                                ▼
-              [Kubernetes Ingress (devsphere-ingress)]
-                                │
-                                ▼ (NetworkPolicy port 8080)
-                       devsphere-api-gateway
-                   (HPA: 2-10 | PDB min: 1)
-                                │
-   ┌────────────────────┬───────┴────────────┬────────────────────┐
-   │                    │                    │                    │
-   ▼                    ▼                    ▼                    ▼
-Auth Service        User Service       Config Server      Service Discovery
-(HPA: 2-10 | PDB: 1) (HPA: 2-10 | PDB: 1) (Fixed 2 | PDB: 1) (Fixed 1 | Standalone)
-(ClusterIP :8081)    (ClusterIP :8082)   (ClusterIP :8888)  (ClusterIP :8761)
-   │                    │
-   └────────────────────┼────────────────────┐
-                        │                    │
-                        ▼                    ▼
-             External Database        Async Message Broker
-              - MySQL Cluster           - Apache Kafka
-              - Redis Cache
-```
-
----
-
-## CI/CD Pipeline & Registry Architecture
-
-```
-                  +-----------------------------------+
-                  |      GitHub Actions Workflows     |
-                  +-----------------+-----------------+
-                                    |
-          +-------------------------+-------------------------+
-          |                                                   |
-[Pull Request: ci.yml]                                [Push main / Tag v*: cd.yml]
-          |                                                   |
-+---------v---------+                               +---------v---------+
-| Quality Gates     |                               | Container Build   |
-| - Verify & Test   |                               | - Multi-stage     |
-| - Dependency Audit|                               | - Package JAR     |
-| - Secret Scan     |                               +---------+---------+
-+-------------------+                                         |
-                                                    +---------v---------+
-                                                    | Push to GHCR      |
-                                                    | ghcr.io/<owner>/  |
-                                                    | devsphere-*       |
-                                                    +---------+---------+
-                                                              |
-                                                    +---------v---------+
-                                                    | Release Manifest  |
-                                                    | - SHA & Tags      |
-                                                    | - Image Digests   |
-                                                    +-------------------+
+                    GitHub Commit
+                          │
+                          ▼
+              GitHub Actions CI Pipeline
+                          │
+                          ▼
+            Immutable Container Image (sha-<commit>)
+                          │
+                          ▼
+              GitHub Container Registry (GHCR)
+                          │
+       ┌──────────────────┼──────────────────┐
+       ▼                  ▼                  ▼
+  Development          Staging           Production
+ (devsphere-dev)  (devsphere-staging)    (devsphere)
+       │                  │                  │
+       ▼                  ▼                  ▼
+ Kustomize Dev     Kustomize Staging  Kustomize Prod
+   Overlay            Overlay            Overlay
+       │                  │                  │
+       └──────────────────┼──────────────────┘
+                          ▼
+                  Kubernetes Cluster
 ```
 
 ---
@@ -151,13 +88,10 @@ Auth Service        User Service       Config Server      Service Discovery
 - **Lesson 22**: Kubernetes Ingress, TLS and External Access Foundation *(Completed)*
 - **Lesson 23**: Kubernetes Security Hardening and Network Isolation *(Completed)*
 - **Lesson 24**: Kubernetes High Availability, Autoscaling and Workload Reliability *(Completed)*
+- **Lesson 25**: Kubernetes Environment Overlays and Production Deployment Strategy *(Completed)*
 
 ---
 
 ## License
 
 This project is licensed under the [MIT License](LICENSE).
-
-
-
-

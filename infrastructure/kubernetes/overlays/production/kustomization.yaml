@@ -1,0 +1,41 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: devsphere
+
+resources:
+  - namespace.yaml
+  - ../../base
+
+images:
+  - name: ghcr.io/OWNER/devsphere-api-gateway
+    newName: ghcr.io/OWNER/devsphere-api-gateway
+    newTag: sha-a1b2c3d
+  - name: ghcr.io/OWNER/devsphere-auth-service
+    newName: ghcr.io/OWNER/devsphere-auth-service
+    newTag: sha-a1b2c3d
+  - name: ghcr.io/OWNER/devsphere-user-service
+    newName: ghcr.io/OWNER/devsphere-user-service
+    newTag: sha-a1b2c3d
+  - name: ghcr.io/OWNER/devsphere-config-server
+    newName: ghcr.io/OWNER/devsphere-config-server
+    newTag: sha-a1b2c3d
+  - name: ghcr.io/OWNER/devsphere-service-discovery
+    newName: ghcr.io/OWNER/devsphere-service-discovery
+    newTag: sha-a1b2c3d
+
+replicas:
+  - name: devsphere-api-gateway
+    count: 2
+  - name: devsphere-auth-service
+    count: 2
+  - name: devsphere-user-service
+    count: 2
+  - name: devsphere-config-server
+    count: 2
+  - name: devsphere-service-discovery
+    count: 1
+
+patches:
+  - path: ingress-patch.yaml
+  - path: configmap-patch.yaml

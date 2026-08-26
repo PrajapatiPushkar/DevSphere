@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-external-infrastructure-egress
+  labels:
+    app.kubernetes.io/name: allow-external-infrastructure-egress
+    app.kubernetes.io/part-of: devsphere
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values:
+          - devsphere-api-gateway
+          - devsphere-auth-service
+          - devsphere-user-service
+          - devsphere-config-server
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - protocol: TCP
+          port: 9092
+        - protocol: TCP
+          port: 29092
+        - protocol: TCP
+          port: 3306
+        - protocol: TCP
+          port: 6379

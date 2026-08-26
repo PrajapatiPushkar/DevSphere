@@ -1,0 +1,20 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: devsphere-ingress
+spec:
+  tls:
+    - hosts:
+        - api.devsphere.example.com
+      secretName: devsphere-api-tls
+  rules:
+    - host: api.devsphere.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: devsphere-api-gateway
+                port:
+                  number: 8080

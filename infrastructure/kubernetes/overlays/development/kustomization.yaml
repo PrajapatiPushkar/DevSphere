@@ -1,0 +1,89 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: devsphere-dev
+
+resources:
+  - namespace.yaml
+  - ../../base
+
+replicas:
+  - name: devsphere-api-gateway
+    count: 1
+  - name: devsphere-auth-service
+    count: 1
+  - name: devsphere-user-service
+    count: 1
+  - name: devsphere-config-server
+    count: 1
+  - name: devsphere-service-discovery
+    count: 1
+
+patches:
+  - path: ingress-patch.yaml
+  - path: configmap-patch.yaml
+  # Disable HPAs in development
+  - patch: |-
+      $patch: delete
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: devsphere-api-gateway-hpa
+    target:
+      kind: HorizontalPodAutoscaler
+      name: devsphere-api-gateway-hpa
+  - patch: |-
+      $patch: delete
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: devsphere-auth-service-hpa
+    target:
+      kind: HorizontalPodAutoscaler
+      name: devsphere-auth-service-hpa
+  - patch: |-
+      $patch: delete
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata:
+        name: devsphere-user-service-hpa
+    target:
+      kind: HorizontalPodAutoscaler
+      name: devsphere-user-service-hpa
+  # Disable PDBs in development
+  - patch: |-
+      $patch: delete
+      apiVersion: policy/v1
+      kind: PodDisruptionBudget
+      metadata:
+        name: devsphere-api-gateway-pdb
+    target:
+      kind: PodDisruptionBudget
+      name: devsphere-api-gateway-pdb
+  - patch: |-
+      $patch: delete
+      apiVersion: policy/v1
+      kind: PodDisruptionBudget
+      metadata:
+        name: devsphere-auth-service-pdb
+    target:
+      kind: PodDisruptionBudget
+      name: devsphere-auth-service-pdb
+  - patch: |-
+      $patch: delete
+      apiVersion: policy/v1
+      kind: PodDisruptionBudget
+      metadata:
+        name: devsphere-user-service-pdb
+    target:
+      kind: PodDisruptionBudget
+      name: devsphere-user-service-pdb
+  - patch: |-
+      $patch: delete
+      apiVersion: policy/v1
+      kind: PodDisruptionBudget
+      metadata:
+        name: devsphere-config-server-pdb
+    target:
+      kind: PodDisruptionBudget
+      name: devsphere-config-server-pdb

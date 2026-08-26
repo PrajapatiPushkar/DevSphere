@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: devsphere-configmap
+data:
+  SPRING_PROFILES_ACTIVE: "dev"
+  CONFIG_SERVER_URL: "http://devsphere-config-server:8888"
+  EUREKA_SERVER_URL: "http://devsphere-service-discovery:8761/eureka"
+  SPRING_REDIS_HOST: "devsphere-redis"
+  SPRING_REDIS_PORT: "6379"
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: "devsphere-kafka:9092"
+  MYSQL_HOST: "devsphere-mysql"
+  MYSQL_PORT: "3306"
+  APP_RATE_LIMIT_ENABLED: "true"
+  APP_RATE_LIMIT_FAIL_OPEN: "true"

@@ -1,0 +1,12 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  labels:
+    app.kubernetes.io/name: default-deny-all
+    app.kubernetes.io/part-of: devsphere
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
