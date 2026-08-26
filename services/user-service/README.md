@@ -20,8 +20,8 @@ Kafka Topic (devsphere.user.v1) ──► Consumer ──[Idempotency & Retries]
 ## Security & Authorization
 - **Independent JWT Validation**: Validates `Authorization: Bearer <token>` independently on incoming HTTP requests. Direct calls bypassing Gateway cannot bypass authorization.
 - **Resource Ownership Enforcement**: Endpoints (`/api/v1/users/{userId}`) verify `authenticatedUserId == requestedUserId OR ROLE_ADMIN` via `@PreAuthorize("@userSecurity.isOwnerOrAdmin(#userId)")`.
-- **IDOR Protection**: Developer profile (`/api/v1/profile`) and goal management (`/api/v1/goals/**`) endpoints enforce strict user identity scoping (`findByIdAndUserId`). Requests for non-owned goals return `404 Not Found` without leaking resource existence.
-- **Goal Management Domain**: Supports daily, weekly, and long-term goal CRUD operations, in-memory progress percentage calculation, and logical archival (`status = ARCHIVED`) via Flyway schema evolution.
+- **IDOR Protection**: Developer profile (`/api/v1/profile`), goal management (`/api/v1/goals/**`), and task management (`/api/v1/tasks/**`) endpoints enforce strict user identity scoping (`findByIdAndUserId`). Requests for non-owned tasks or goals return `404 Not Found` without leaking resource existence.
+- **Goal & Task Domains**: Supports developer profiles, daily/weekly/long-term goals, and task management (`TODO`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED`, `ARCHIVED`) with optional goal association, dynamic overdue calculation, state transition guardrails, database pagination, and logical archival (`status = ARCHIVED`).
 - **401 vs 403 HTTP Semantics**: Unauthenticated requests return `401 Unauthorized`. Accessing unauthorized resources returns `403 Forbidden` or `404 Not Found` for IDOR isolation.
 - **Admin Endpoint Security**: Administrative endpoints (`/api/v1/users/admin/**`) require `ROLE_ADMIN` authority.
 
