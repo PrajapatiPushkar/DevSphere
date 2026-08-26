@@ -23,6 +23,8 @@ spring:
 
   flyway:
     enabled: true
+    clean-disabled: false
+    clean-on-validation-error: true
     locations: classpath:db/migration
 
   kafka:

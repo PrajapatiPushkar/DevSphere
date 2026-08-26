@@ -30,11 +30,32 @@ public class UserProfile {
     @Column(name = "display_name", length = 200)
     private String displayName;
 
+    @Column(name = "headline", length = 250)
+    private String headline;
+
     @Column(name = "bio", columnDefinition = "TEXT")
     private String bio;
 
+    @Column(name = "location", length = 100)
+    private String location;
+
     @Column(name = "phone_number", length = 30)
     private String phoneNumber;
+
+    @Column(name = "github_url", length = 255)
+    private String githubUrl;
+
+    @Column(name = "linkedin_url", length = 255)
+    private String linkedinUrl;
+
+    @Column(name = "portfolio_url", length = 255)
+    private String portfolioUrl;
+
+    @Column(name = "`current_role`", length = 100)
+    private String currentRole;
+
+    @Column(name = "years_of_experience")
+    private Integer yearsOfExperience;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -117,6 +138,14 @@ public class UserProfile {
         this.displayName = displayName;
     }
 
+    public String getHeadline() {
+        return headline;
+    }
+
+    public void setHeadline(String headline) {
+        this.headline = headline;
+    }
+
     public String getBio() {
         return bio;
     }
@@ -125,12 +154,60 @@ public class UserProfile {
         this.bio = bio;
     }
 
+    public String getLocation() {
+        return location;
+    }
+
+    public void setLocation(String location) {
+        this.location = location;
+    }
+
     public String getPhoneNumber() {
         return phoneNumber;
     }
 
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
+    }
+
+    public String getGithubUrl() {
+        return githubUrl;
+    }
+
+    public void setGithubUrl(String githubUrl) {
+        this.githubUrl = githubUrl;
+    }
+
+    public String getLinkedinUrl() {
+        return linkedinUrl;
+    }
+
+    public void setLinkedinUrl(String linkedinUrl) {
+        this.linkedinUrl = linkedinUrl;
+    }
+
+    public String getPortfolioUrl() {
+        return portfolioUrl;
+    }
+
+    public void setPortfolioUrl(String portfolioUrl) {
+        this.portfolioUrl = portfolioUrl;
+    }
+
+    public String getCurrentRole() {
+        return currentRole;
+    }
+
+    public void setCurrentRole(String currentRole) {
+        this.currentRole = currentRole;
+    }
+
+    public Integer getYearsOfExperience() {
+        return yearsOfExperience;
+    }
+
+    public void setYearsOfExperience(Integer yearsOfExperience) {
+        this.yearsOfExperience = yearsOfExperience;
     }
 
     public Instant getCreatedAt() {

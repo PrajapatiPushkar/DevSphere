@@ -121,13 +121,21 @@ public class UserProfileService {
                         return new UserProfile(userId);
                     });
 
-            profile.setFirstName(request.getFirstName());
-            profile.setLastName(request.getLastName());
-            profile.setDisplayName(request.getDisplayName());
-            profile.setBio(request.getBio());
-            profile.setPhoneNumber(request.getPhoneNumber());
+            if (request.getFirstName() != null) profile.setFirstName(request.getFirstName());
+            if (request.getLastName() != null) profile.setLastName(request.getLastName());
+            if (request.getDisplayName() != null) profile.setDisplayName(request.getDisplayName());
+            if (request.getHeadline() != null) profile.setHeadline(request.getHeadline());
+            if (request.getBio() != null) profile.setBio(request.getBio());
+            if (request.getLocation() != null) profile.setLocation(request.getLocation());
+            if (request.getPhoneNumber() != null) profile.setPhoneNumber(request.getPhoneNumber());
+            if (request.getGithubUrl() != null) profile.setGithubUrl(request.getGithubUrl());
+            if (request.getLinkedinUrl() != null) profile.setLinkedinUrl(request.getLinkedinUrl());
+            if (request.getPortfolioUrl() != null) profile.setPortfolioUrl(request.getPortfolioUrl());
+            if (request.getCurrentRole() != null) profile.setCurrentRole(request.getCurrentRole());
+            if (request.getYearsOfExperience() != null) profile.setYearsOfExperience(request.getYearsOfExperience());
 
             UserProfile savedProfile = userProfileRepository.save(profile);
+            meterRegistry.counter("devsphere_profile_updates_total").increment();
             log.info("User profile updated successfully in database for userId: {}", userId);
 
             UserProfileResponse response = mapToResponse(savedProfile);
@@ -152,11 +160,17 @@ public class UserProfileService {
                 entity.getFirstName(),
                 entity.getLastName(),
                 entity.getDisplayName(),
+                entity.getHeadline(),
                 entity.getBio(),
+                entity.getLocation(),
                 entity.getPhoneNumber(),
+                entity.getGithubUrl(),
+                entity.getLinkedinUrl(),
+                entity.getPortfolioUrl(),
+                entity.getCurrentRole(),
+                entity.getYearsOfExperience(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );
     }
 }
-
