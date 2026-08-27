@@ -52,7 +52,7 @@ class ResumeSectionServiceTest {
         section.setId(100L);
 
         when(resumeProfileRepository.findByIdAndUserId(resumeId, userId)).thenReturn(Optional.of(profile));
-        when(resumeSectionRepository.findAllByResumeProfileIdOrderByDisplayOrderAsc(resumeId)).thenReturn(List.of(section));
+        when(resumeSectionRepository.findAllByResumeProfileIdOrderByDisplayOrderAscIdAsc(resumeId)).thenReturn(List.of(section));
 
         List<ResumeSectionResponse> list = resumeSectionService.listSections(resumeId, userId);
 

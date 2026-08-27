@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ResumeSectionRepository extends JpaRepository<ResumeSection, Long> {
 
-    List<ResumeSection> findAllByResumeProfileIdOrderByDisplayOrderAsc(Long resumeProfileId);
+    List<ResumeSection> findAllByResumeProfileIdOrderByDisplayOrderAscIdAsc(Long resumeProfileId);
 
     Optional<ResumeSection> findByIdAndResumeProfileId(Long id, Long resumeProfileId);
 

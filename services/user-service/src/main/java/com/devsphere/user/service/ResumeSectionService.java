@@ -40,7 +40,7 @@ public class ResumeSectionService {
     @Transactional(readOnly = true)
     public List<ResumeSectionResponse> listSections(Long resumeId, Long userId) {
         verifyResumeOwnership(resumeId, userId);
-        return resumeSectionRepository.findAllByResumeProfileIdOrderByDisplayOrderAsc(resumeId)
+        return resumeSectionRepository.findAllByResumeProfileIdOrderByDisplayOrderAscIdAsc(resumeId)
                 .stream()
                 .map(ResumeSectionResponse::new)
                 .toList();

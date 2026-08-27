@@ -24,6 +24,9 @@ import com.devsphere.user.dto.ResumeSkillResponse;
 import com.devsphere.user.dto.SkillRequest;
 import com.devsphere.user.dto.SkillResponse;
 import com.devsphere.user.dto.UpdateResumeSectionRequest;
+import com.devsphere.user.dto.compilation.CompiledResumeResponse;
+import com.devsphere.user.dto.compilation.CompiledResumeSectionResponse;
+import com.devsphere.user.dto.compilation.CompiledSummaryResponse;
 import com.devsphere.user.entity.EmploymentType;
 import com.devsphere.user.entity.Proficiency;
 import com.devsphere.user.entity.ProjectType;
@@ -73,6 +76,8 @@ class ResumeIntegrationTest {
     private ResumeSectionService resumeSectionService;
     @Autowired
     private ResumeSelectionService resumeSelectionService;
+    @Autowired
+    private com.devsphere.user.service.ResumeCompilationService resumeCompilationService;
 
     @Autowired
     private ExperienceService experienceService;
@@ -249,6 +254,66 @@ class ResumeIntegrationTest {
                 .hasMessageContaining("Experience record not found");
 
         assertThatThrownBy(() -> resumeProfileService.getResumeProfile(profileB.getId(), userA))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Resume profile not found");
+    }
+
+    @Test
+    void compileResumePipeline_fullCompilationWithOrderingVisibilityAndSelections() {
+        Long userId = 1007L;
+
+        // Create source entities
+        ExperienceResponse exp1 = experienceService.createExperience(userId, new ExperienceRequest("Tech Corp", "Backend Engineer", EmploymentType.FULL_TIME, "Remote", LocalDate.of(2021, 1, 1), null, true, "Java & Spring Boot", 0));
+        SkillResponse skill1 = skillService.createSkill(userId, new SkillRequest("Java", SkillCategory.PROGRAMMING_LANGUAGE, Proficiency.EXPERT, 5, 0));
+
+        // Create resume profile with summary override
+        ResumeProfileResponse profile = resumeProfileService.createResumeProfile(userId, new ResumeProfileRequest("Java Backend Resume", "Senior Java Engineer", "Overridden Executive Summary", ResumeTemplate.PROFESSIONAL));
+
+        // Add selections
+        resumeSelectionService.addExperience(profile.getId(), userId, new ResumeExperienceRequest(exp1.getId(), 1));
+        resumeSelectionService.addSkill(profile.getId(), userId, new ResumeSkillRequest(skill1.getId(), 1));
+
+        // Modify section visibility & display order (make EDUCATION invisible, set PROJECTS to displayOrder 1, SUMMARY to displayOrder 2)
+        List<ResumeSectionResponse> sections = resumeSectionService.listSections(profile.getId(), userId);
+        for (ResumeSectionResponse sec : sections) {
+            if (sec.getSectionType() == com.devsphere.user.entity.ResumeSectionType.EDUCATION) {
+                resumeSectionService.updateSection(profile.getId(), sec.getId(), userId, new UpdateResumeSectionRequest(sec.getDisplayOrder(), false));
+            } else if (sec.getSectionType() == com.devsphere.user.entity.ResumeSectionType.PROJECTS) {
+                resumeSectionService.updateSection(profile.getId(), sec.getId(), userId, new UpdateResumeSectionRequest(1, true));
+            } else if (sec.getSectionType() == com.devsphere.user.entity.ResumeSectionType.SUMMARY) {
+                resumeSectionService.updateSection(profile.getId(), sec.getId(), userId, new UpdateResumeSectionRequest(2, true));
+            }
+        }
+
+        // Compile resume
+        CompiledResumeResponse compiled = resumeCompilationService.compileResume(profile.getId(), userId);
+
+        assertThat(compiled.getName()).isEqualTo("Java Backend Resume");
+        assertThat(compiled.getTargetRole()).isEqualTo("Senior Java Engineer");
+
+        // Verify EDUCATION is excluded (invisible)
+        boolean hasEducation = compiled.getSections().stream().anyMatch(s -> s.getSectionType() == com.devsphere.user.entity.ResumeSectionType.EDUCATION);
+        assertThat(hasEducation).isFalse();
+
+        // Verify PROJECTS is now first section (displayOrder 1)
+        assertThat(compiled.getSections().get(0).getSectionType()).isEqualTo(com.devsphere.user.entity.ResumeSectionType.PROJECTS);
+
+        // Verify summary override text
+        CompiledResumeSectionResponse summarySec = compiled.getSections().stream()
+                .filter(s -> s.getSectionType() == com.devsphere.user.entity.ResumeSectionType.SUMMARY)
+                .findFirst().orElseThrow();
+        CompiledSummaryResponse summaryContent = (CompiledSummaryResponse) summarySec.getContent();
+        assertThat(summaryContent.getText()).isEqualTo("Overridden Executive Summary");
+    }
+
+    @Test
+    void compileResumePipeline_crossUserCompilationReturnsNotFound() {
+        Long userA = 1008L;
+        Long userB = 1009L;
+
+        ResumeProfileResponse profileA = resumeProfileService.createResumeProfile(userA, new ResumeProfileRequest("Resume A", "Role A", null, ResumeTemplate.MINIMAL));
+
+        assertThatThrownBy(() -> resumeCompilationService.compileResume(profileA.getId(), userB))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Resume profile not found");
     }
