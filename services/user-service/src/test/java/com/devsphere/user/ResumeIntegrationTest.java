@@ -78,6 +78,8 @@ class ResumeIntegrationTest {
     private ResumeSelectionService resumeSelectionService;
     @Autowired
     private com.devsphere.user.service.ResumeCompilationService resumeCompilationService;
+    @Autowired
+    private com.devsphere.user.service.ResumeRenderingService resumeRenderingService;
 
     @Autowired
     private ExperienceService experienceService;
@@ -314,6 +316,40 @@ class ResumeIntegrationTest {
         ResumeProfileResponse profileA = resumeProfileService.createResumeProfile(userA, new ResumeProfileRequest("Resume A", "Role A", null, ResumeTemplate.MINIMAL));
 
         assertThatThrownBy(() -> resumeCompilationService.compileResume(profileA.getId(), userB))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Resume profile not found");
+    }
+
+    @Test
+    void htmlRenderingPipeline_rendersHtmlDocumentEndToEnd() {
+        Long userId = 1010L;
+
+        ExperienceResponse exp = experienceService.createExperience(userId, new ExperienceRequest("Tech Corp", "Full Stack Developer", EmploymentType.FULL_TIME, "San Francisco", LocalDate.of(2020, 5, 1), null, true, "Built microservices", 0));
+        SkillResponse skill = skillService.createSkill(userId, new SkillRequest("Spring Boot", SkillCategory.FRAMEWORK, Proficiency.EXPERT, 4, 0));
+
+        ResumeProfileResponse profile = resumeProfileService.createResumeProfile(userId, new ResumeProfileRequest("Full Stack Resume", "Senior Developer", "Experienced Architect", ResumeTemplate.MODERN));
+
+        resumeSelectionService.addExperience(profile.getId(), userId, new ResumeExperienceRequest(exp.getId(), 1));
+        resumeSelectionService.addSkill(profile.getId(), userId, new ResumeSkillRequest(skill.getId(), 1));
+
+        String html = resumeRenderingService.renderHtmlResume(profile.getId(), userId);
+
+        assertThat(html).startsWith("<!DOCTYPE html>");
+        assertThat(html).contains("<title>Full Stack Resume</title>");
+        assertThat(html).contains("class=\"template-modern\"");
+        assertThat(html).contains("Full Stack Developer");
+        assertThat(html).contains("Spring Boot");
+        assertThat(html).contains("Experienced Architect");
+    }
+
+    @Test
+    void htmlRenderingPipeline_crossUserRenderingReturnsNotFound() {
+        Long userA = 1011L;
+        Long userB = 1012L;
+
+        ResumeProfileResponse profileA = resumeProfileService.createResumeProfile(userA, new ResumeProfileRequest("Resume A", "Role A", null, ResumeTemplate.MINIMAL));
+
+        assertThatThrownBy(() -> resumeRenderingService.renderHtmlResume(profileA.getId(), userB))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Resume profile not found");
     }
