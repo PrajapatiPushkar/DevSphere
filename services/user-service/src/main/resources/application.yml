@@ -11,3 +11,9 @@ spring:
   data:
     redis:
       password: ${REDIS_PASSWORD:}
+
+app:
+  resume:
+    export:
+      max-size-bytes: 10485760
+

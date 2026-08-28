@@ -2,11 +2,15 @@ package com.devsphere.user.controller;
 
 import com.devsphere.user.dto.DocxExportResult;
 import com.devsphere.user.dto.PdfExportResult;
+import com.devsphere.user.dto.ResumeExportFormat;
+import com.devsphere.user.dto.ResumeExportResult;
 import com.devsphere.user.exception.GlobalExceptionHandler;
 import com.devsphere.user.exception.ResourceNotFoundException;
 import com.devsphere.user.service.ResumeDocxRenderingService;
+import com.devsphere.user.service.ResumeExportService;
 import com.devsphere.user.service.ResumePdfRenderingService;
 import com.devsphere.user.service.ResumeRenderingService;
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
@@ -33,6 +37,9 @@ class ResumeRenderingControllerTest {
     private MockMvc mockMvc;
 
     @MockBean
+    private ResumeExportService resumeExportService;
+
+    @MockBean
     private ResumeRenderingService resumeRenderingService;
 
     @MockBean
@@ -52,8 +59,9 @@ class ResumeRenderingControllerTest {
         Long userId = 100L;
         Long resumeId = 50L;
         String mockHtml = "<!DOCTYPE html><html><body><h1>Mock Resume</h1></body></html>";
+        ResumeExportResult exportResult = new ResumeExportResult(mockHtml.getBytes(StandardCharsets.UTF_8), "text/html;charset=UTF-8", "resume.html", false);
 
-        when(resumeRenderingService.renderHtmlResume(resumeId, userId)).thenReturn(mockHtml);
+        when(resumeExportService.exportResume(resumeId, userId, ResumeExportFormat.HTML)).thenReturn(exportResult);
 
         mockMvc.perform(get("/api/v1/resumes/{resumeId}/render/html", resumeId)
                         .header("X-Authenticated-User-Id", userId))
@@ -67,9 +75,9 @@ class ResumeRenderingControllerTest {
         Long userId = 100L;
         Long resumeId = 50L;
         byte[] mockPdf = "%PDF-1.4 mock pdf binary content".getBytes();
-        PdfExportResult exportResult = new PdfExportResult(mockPdf, "Pushkar_Resume.pdf");
+        ResumeExportResult exportResult = new ResumeExportResult(mockPdf, "application/pdf", "Pushkar_Resume.pdf", true);
 
-        when(resumePdfRenderingService.exportPdfResume(resumeId, userId)).thenReturn(exportResult);
+        when(resumeExportService.exportResume(resumeId, userId, ResumeExportFormat.PDF)).thenReturn(exportResult);
 
         mockMvc.perform(get("/api/v1/resumes/{resumeId}/render/pdf", resumeId)
                         .header("X-Authenticated-User-Id", userId))
@@ -92,7 +100,7 @@ class ResumeRenderingControllerTest {
         Long userId = 100L;
         Long resumeId = 999L;
 
-        when(resumePdfRenderingService.exportPdfResume(resumeId, userId))
+        when(resumeExportService.exportResume(resumeId, userId, ResumeExportFormat.PDF))
                 .thenThrow(new ResourceNotFoundException("Resume profile not found"));
 
         mockMvc.perform(get("/api/v1/resumes/{resumeId}/render/pdf", resumeId)
@@ -105,9 +113,9 @@ class ResumeRenderingControllerTest {
         Long userId = 100L;
         Long resumeId = 50L;
         byte[] mockDocx = "PK\u0003\u0004 mock docx binary content".getBytes();
-        DocxExportResult exportResult = new DocxExportResult(mockDocx, "Pushkar_Resume.docx");
+        ResumeExportResult exportResult = new ResumeExportResult(mockDocx, DOCX_MEDIA_TYPE, "Pushkar_Resume.docx", true);
 
-        when(resumeDocxRenderingService.exportDocxResume(resumeId, userId)).thenReturn(exportResult);
+        when(resumeExportService.exportResume(resumeId, userId, ResumeExportFormat.DOCX)).thenReturn(exportResult);
 
         mockMvc.perform(get("/api/v1/resumes/{resumeId}/render/docx", resumeId)
                         .header("X-Authenticated-User-Id", userId))
@@ -130,7 +138,7 @@ class ResumeRenderingControllerTest {
         Long userId = 100L;
         Long resumeId = 999L;
 
-        when(resumeDocxRenderingService.exportDocxResume(resumeId, userId))
+        when(resumeExportService.exportResume(resumeId, userId, ResumeExportFormat.DOCX))
                 .thenThrow(new ResourceNotFoundException("Resume profile not found"));
 
         mockMvc.perform(get("/api/v1/resumes/{resumeId}/render/docx", resumeId)

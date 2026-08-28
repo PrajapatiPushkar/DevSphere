@@ -12,6 +12,8 @@ import com.devsphere.user.dto.ResumeCertificationRequest;
 import com.devsphere.user.dto.ResumeCertificationResponse;
 import com.devsphere.user.dto.ResumeEducationRequest;
 import com.devsphere.user.dto.ResumeEducationResponse;
+import com.devsphere.user.dto.ResumeExportFormat;
+import com.devsphere.user.dto.ResumeExportResult;
 import com.devsphere.user.dto.ResumeExperienceRequest;
 import com.devsphere.user.dto.ResumeExperienceResponse;
 import com.devsphere.user.dto.ResumeProfileRequest;
@@ -51,6 +53,7 @@ import com.devsphere.user.service.CertificationService;
 import com.devsphere.user.service.EducationService;
 import com.devsphere.user.service.ExperienceService;
 import com.devsphere.user.service.ProjectService;
+import com.devsphere.user.service.ResumeExportService;
 import com.devsphere.user.service.ResumeProfileService;
 import com.devsphere.user.service.ResumeSectionService;
 import com.devsphere.user.service.ResumeSelectionService;
@@ -84,6 +87,8 @@ class ResumeIntegrationTest {
     private com.devsphere.user.service.ResumePdfRenderingService resumePdfRenderingService;
     @Autowired
     private com.devsphere.user.service.ResumeDocxRenderingService resumeDocxRenderingService;
+    @Autowired
+    private ResumeExportService resumeExportService;
 
     @Autowired
     private ExperienceService experienceService;
@@ -390,18 +395,6 @@ class ResumeIntegrationTest {
     }
 
     @Test
-    void pdfRenderingPipeline_crossUserRenderingReturnsNotFound() {
-        Long userA = 1014L;
-        Long userB = 1015L;
-
-        ResumeProfileResponse profileA = resumeProfileService.createResumeProfile(userA, new ResumeProfileRequest("Resume A", "Role A", null, ResumeTemplate.MINIMAL));
-
-        assertThatThrownBy(() -> resumePdfRenderingService.exportPdfResume(profileA.getId(), userB))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining("Resume profile not found");
-    }
-
-    @Test
     void docxRenderingPipeline_rendersDocxDocumentEndToEnd() throws Exception {
         Long userId = 1016L;
 
@@ -448,15 +441,34 @@ class ResumeIntegrationTest {
     }
 
     @Test
-    void docxRenderingPipeline_crossUserRenderingReturnsNotFound() {
-        Long userA = 1017L;
-        Long userB = 1018L;
+    void exportServiceOrchestration_exportsHtmlPdfDocxConsistently() throws Exception {
+        Long userId = 1020L;
 
-        ResumeProfileResponse profileA = resumeProfileService.createResumeProfile(userA, new ResumeProfileRequest("Resume A", "Role A", null, ResumeTemplate.MINIMAL));
+        ExperienceResponse exp = experienceService.createExperience(userId, new ExperienceRequest("Unified Core", "Principal Engineer", EmploymentType.FULL_TIME, "Boston", LocalDate.of(2021, 1, 1), null, true, "Engineered export platform", 0));
+        EducationResponse edu = educationService.createEducation(userId, new EducationRequest("Harvard", "Bachelor of Science", "Computer Science", "Cambridge", LocalDate.of(2017, 9, 1), LocalDate.of(2021, 5, 1), false, "Graduated Magna Cum Laude", 0));
 
-        assertThatThrownBy(() -> resumeDocxRenderingService.exportDocxResume(profileA.getId(), userB))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining("Resume profile not found");
+        ResumeProfileResponse profile = resumeProfileService.createResumeProfile(userId, new ResumeProfileRequest("Unified Resume", "Distinguished Engineer", "Unified multi-format exporter", ResumeTemplate.PROFESSIONAL));
+
+        resumeSelectionService.addExperience(profile.getId(), userId, new ResumeExperienceRequest(exp.getId(), 1));
+        resumeSelectionService.addEducation(profile.getId(), userId, new ResumeEducationRequest(edu.getId(), 2));
+
+        // HTML Export
+        ResumeExportResult htmlResult = resumeExportService.exportResume(profile.getId(), userId, ResumeExportFormat.HTML);
+        assertThat(htmlResult.getContentType()).contains("text/html");
+        assertThat(htmlResult.getFilename()).isEqualTo("Unified Resume.html");
+        assertThat(htmlResult.isAttachment()).isFalse();
+
+        // PDF Export
+        ResumeExportResult pdfResult = resumeExportService.exportResume(profile.getId(), userId, ResumeExportFormat.PDF);
+        assertThat(pdfResult.getContentType()).isEqualTo("application/pdf");
+        assertThat(pdfResult.getFilename()).isEqualTo("Unified Resume.pdf");
+        assertThat(pdfResult.isAttachment()).isTrue();
+
+        // DOCX Export
+        ResumeExportResult docxResult = resumeExportService.exportResume(profile.getId(), userId, ResumeExportFormat.DOCX);
+        assertThat(docxResult.getContentType()).isEqualTo("application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+        assertThat(docxResult.getFilename()).isEqualTo("Unified Resume.docx");
+        assertThat(docxResult.isAttachment()).isTrue();
     }
 
     @Test

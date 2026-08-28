@@ -2,11 +2,16 @@ package com.devsphere.user.controller;
 
 import com.devsphere.user.dto.DocxExportResult;
 import com.devsphere.user.dto.PdfExportResult;
+import com.devsphere.user.dto.ResumeExportFormat;
+import com.devsphere.user.dto.ResumeExportResult;
 import com.devsphere.user.exception.UnauthorizedException;
 import com.devsphere.user.security.UserPrincipal;
 import com.devsphere.user.service.ResumeDocxRenderingService;
+import com.devsphere.user.service.ResumeExportService;
 import com.devsphere.user.service.ResumePdfRenderingService;
 import com.devsphere.user.service.ResumeRenderingService;
+import java.nio.charset.StandardCharsets;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -26,16 +31,30 @@ public class ResumeRenderingController {
     private static final String AUTH_USER_ID_HEADER = "X-Authenticated-User-Id";
     private static final String DOCX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
+    private final ResumeExportService resumeExportService;
     private final ResumeRenderingService resumeRenderingService;
     private final ResumePdfRenderingService resumePdfRenderingService;
     private final ResumeDocxRenderingService resumeDocxRenderingService;
 
-    public ResumeRenderingController(ResumeRenderingService resumeRenderingService,
+    @Autowired
+    public ResumeRenderingController(ResumeExportService resumeExportService,
+                                       ResumeRenderingService resumeRenderingService,
                                        ResumePdfRenderingService resumePdfRenderingService,
                                        ResumeDocxRenderingService resumeDocxRenderingService) {
+        this.resumeExportService = resumeExportService;
         this.resumeRenderingService = resumeRenderingService;
         this.resumePdfRenderingService = resumePdfRenderingService;
         this.resumeDocxRenderingService = resumeDocxRenderingService;
+    }
+
+    public ResumeRenderingController(ResumeExportService resumeExportService) {
+        this(resumeExportService, null, null, null);
+    }
+
+    public ResumeRenderingController(ResumeRenderingService resumeRenderingService,
+                                       ResumePdfRenderingService resumePdfRenderingService,
+                                       ResumeDocxRenderingService resumeDocxRenderingService) {
+        this(null, resumeRenderingService, resumePdfRenderingService, resumeDocxRenderingService);
     }
 
     @GetMapping(value = "/{resumeId}/render/html", produces = MediaType.TEXT_HTML_VALUE + ";charset=UTF-8")
@@ -43,11 +62,16 @@ public class ResumeRenderingController {
             @RequestHeader(value = AUTH_USER_ID_HEADER, required = false) String authUserIdHeader,
             @PathVariable Long resumeId) {
         Long userId = extractAndValidateUserId(authUserIdHeader);
-        String html = resumeRenderingService.renderHtmlResume(resumeId, userId);
+        if (resumeExportService != null) {
+            ResumeExportResult result = resumeExportService.exportResume(resumeId, userId, ResumeExportFormat.HTML);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType(result.getContentType()));
+            return ResponseEntity.ok().headers(headers).body(new String(result.getContent(), StandardCharsets.UTF_8));
+        }
 
+        String html = resumeRenderingService.renderHtmlResume(resumeId, userId);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType("text/html;charset=UTF-8"));
-
         return ResponseEntity.ok().headers(headers).body(html);
     }
 
@@ -56,14 +80,18 @@ public class ResumeRenderingController {
             @RequestHeader(value = AUTH_USER_ID_HEADER, required = false) String authUserIdHeader,
             @PathVariable Long resumeId) {
         Long userId = extractAndValidateUserId(authUserIdHeader);
-        PdfExportResult pdfExportResult = resumePdfRenderingService.exportPdfResume(resumeId, userId);
+        if (resumeExportService != null) {
+            ResumeExportResult result = resumeExportService.exportResume(resumeId, userId, ResumeExportFormat.PDF);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType(result.getContentType()));
+            headers.setContentDisposition(ContentDisposition.attachment().filename(result.getFilename()).build());
+            return ResponseEntity.ok().headers(headers).body(result.getContent());
+        }
 
+        PdfExportResult pdfExportResult = resumePdfRenderingService.exportPdfResume(resumeId, userId);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentDisposition(ContentDisposition.attachment()
-                .filename(pdfExportResult.getFilename())
-                .build());
-
+        headers.setContentDisposition(ContentDisposition.attachment().filename(pdfExportResult.getFilename()).build());
         return ResponseEntity.ok().headers(headers).body(pdfExportResult.getPdfBytes());
     }
 
@@ -72,14 +100,18 @@ public class ResumeRenderingController {
             @RequestHeader(value = AUTH_USER_ID_HEADER, required = false) String authUserIdHeader,
             @PathVariable Long resumeId) {
         Long userId = extractAndValidateUserId(authUserIdHeader);
-        DocxExportResult docxExportResult = resumeDocxRenderingService.exportDocxResume(resumeId, userId);
+        if (resumeExportService != null) {
+            ResumeExportResult result = resumeExportService.exportResume(resumeId, userId, ResumeExportFormat.DOCX);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType(result.getContentType()));
+            headers.setContentDisposition(ContentDisposition.attachment().filename(result.getFilename()).build());
+            return ResponseEntity.ok().headers(headers).body(result.getContent());
+        }
 
+        DocxExportResult docxExportResult = resumeDocxRenderingService.exportDocxResume(resumeId, userId);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType(DOCX_MEDIA_TYPE));
-        headers.setContentDisposition(ContentDisposition.attachment()
-                .filename(docxExportResult.getFilename())
-                .build());
-
+        headers.setContentDisposition(ContentDisposition.attachment().filename(docxExportResult.getFilename()).build());
         return ResponseEntity.ok().headers(headers).body(docxExportResult.getDocxBytes());
     }
 

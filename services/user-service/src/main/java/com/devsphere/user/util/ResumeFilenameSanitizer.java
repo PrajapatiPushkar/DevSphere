@@ -26,18 +26,21 @@ public class ResumeFilenameSanitizer {
         }
 
         // Remove control characters, CR, LF, null bytes
-        String sanitized = input.replaceAll("[\\r\\n\\t\\u0000]", "");
+        String sanitized = input.replaceAll("[\\r\\n\\t\\u0000-\\u001F\\u007F]", "");
 
-        // Replace path traversal / directory separators (\ and /) with underscore
+        // Remove Windows drive letters (e.g. C:, D:)
+        sanitized = sanitized.replaceAll("^[a-zA-Z]:", "");
+
+        // Replace path separators (\ and /) with underscore
         sanitized = sanitized.replaceAll("[\\\\/]", "_");
 
         // Remove path traversal dot sequences (..)
         sanitized = sanitized.replaceAll("\\.{2,}", "");
 
-        // Remove HTML tags / script tags if any
+        // Remove HTML / script tags
         sanitized = sanitized.replaceAll("<[^>]*>", "");
 
-        // Remove unsafe characters (keep alphanumeric, space, underscore, hyphen, dot)
+        // Keep alphanumeric, spaces, underscores, hyphens, and dots
         sanitized = sanitized.replaceAll("[^a-zA-Z0-9_\\-\\s.]", "");
 
         // Trim leading and trailing whitespace or dots
@@ -47,17 +50,28 @@ public class ResumeFilenameSanitizer {
             return defaultFilename;
         }
 
-        // Strip existing target extension if present before enforcing max length
+        // Strip existing matching target extension (e.g. .pdf, .docx, .html)
         String extSuffix = "." + ext;
         if (sanitized.toLowerCase(Locale.ENGLISH).endsWith(extSuffix)) {
             sanitized = sanitized.substring(0, sanitized.length() - extSuffix.length()).trim();
         }
 
+        // Also strip other known extensions if present at the end to prevent double extension confusion (e.g. resume.pdf.docx -> resume.docx)
+        for (String knownExt : new String[]{"pdf", "docx", "html"}) {
+            String knownSuffix = "." + knownExt;
+            if (sanitized.toLowerCase(Locale.ENGLISH).endsWith(knownSuffix)) {
+                sanitized = sanitized.substring(0, sanitized.length() - knownSuffix.length()).trim();
+            }
+        }
+
+        // Trim dots or spaces after stripping extension
+        sanitized = sanitized.trim().replaceAll("^[.\\s]+|[.\\s]+$", "");
+
         if (sanitized.isBlank()) {
             return defaultFilename;
         }
 
-        // Truncate if exceeds max length
+        // Truncate base filename if it exceeds max length
         if (sanitized.length() > MAX_LENGTH) {
             sanitized = sanitized.substring(0, MAX_LENGTH).trim();
         }
