@@ -8,7 +8,8 @@ DevSphere is a developer career and productivity platform designed to help devel
 
 🚧 **Under Active Development**
 
-DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 36** are complete:
+DevSphere is progressing through its incremental milestone lessons. **Lessons 1 through 37** are complete:
+- **Resume DOCX Rendering & Export Foundation Domain (Lesson 37)**: Implemented production-quality, editable Microsoft Word (`.docx`) export engine for developer resumes inside `services/user-service` (`GET /api/v1/resumes/{id}/render/docx`). Introduced `DocxResumeRenderer` interface and `ApachePoiDocxResumeRenderer` implementation consuming `CompiledResumeResponse` directly without relying on HTML/PDF conversion. Features include Apache POI `poi-ooxml` integration, A4 portrait page layout, template-aware Word styling (`DocxTemplateStyle` for `PROFESSIONAL`, `MODERN`, `MINIMAL`), filename sanitization (`ResumeFilenameSanitizer`), attachment download behavior (`Content-Disposition: attachment; filename="..."`), XSS plain-text safety, URL hyperlink validation (`http://` / `https://` only), IDOR isolation (HTTP 404), Micrometer metrics (`devsphere_resume_docx_export_duration`, `devsphere_resume_docx_export_total`), ADR 0036 ([`docs/decisions/0036-resume-docx-rendering.md`](file:///docs/decisions/0036-resume-docx-rendering.md)), and architecture documentation ([`docs/architecture/resume-docx-rendering.md`](file:///docs/architecture/resume-docx-rendering.md)).
 - **Resume PDF Rendering & Export Foundation Domain (Lesson 36)**: Implemented production-quality PDF export engine for developer resumes inside `services/user-service` (`GET /api/v1/resumes/{id}/render/pdf`). Introduced `PdfResumeRenderer` interface and `OpenHtmlToPdfResumeRenderer` implementation, consuming HTML produced by `HtmlResumeRenderer` as the single visual source of truth. Features include zero-database-access PDF renderer boundary, OpenHTMLtoPDF Java library integration, A4 portrait page layout (`margin: 15mm`), print page-break rules, filename sanitization preventing HTTP header injection and path traversal (`ResumeFilenameSanitizer`), safe attachment download behavior (`Content-Disposition: attachment; filename="..."`), strict XSS/URL safety preservation, IDOR isolation (HTTP 404), Micrometer metrics (`devsphere_resume_pdf_export_duration`, `devsphere_resume_pdf_export_total`), ADR 0035 ([`docs/decisions/0035-resume-pdf-rendering.md`](file:///docs/decisions/0035-resume-pdf-rendering.md)), and architecture documentation ([`docs/architecture/resume-pdf-rendering.md`](file:///docs/architecture/resume-pdf-rendering.md)).
 - **Resume HTML Rendering Foundation Domain (Lesson 35)**: Implemented deterministic HTML Resume Rendering Foundation inside `services/user-service` (`GET /api/v1/resumes/{id}/render/html`). Created `ResumeRenderer` interface and `HtmlResumeRenderer` implementation, converting compiled resume models (`CompiledResumeResponse`) into complete semantic HTML documents (`Content-Type: text/html;charset=UTF-8`). Features include strict zero-database-access rendering boundary, mandatory HTML entity escaping for XSS prevention, safe URL scheme sanitization (`http://` / `https://` only), embedded print-friendly CSS with template variation support (`PROFESSIONAL`, `MODERN`, `MINIMAL`), strict section and item ordering preservation, byte-for-byte deterministic rendering output, Micrometer metrics (`devsphere_resume_render_duration`, `devsphere_resume_render_total`), ADR 0034 ([`docs/decisions/0034-resume-html-rendering.md`](file:///docs/decisions/0034-resume-html-rendering.md)), and architecture documentation ([`docs/architecture/resume-html-rendering.md`](file:///docs/architecture/resume-html-rendering.md)).
 - **Resume Compilation Engine & Preview Model Domain (Lesson 34)**: Implemented deterministic Resume Compilation Engine inside `services/user-service` (`GET /api/v1/resumes/{id}/compile`). Created compiled DTO representation (`CompiledResumeResponse`, `CompiledResumeSectionResponse`, `CompiledSummaryResponse`, `CompiledExperienceResponse`, `CompiledEducationResponse`, `CompiledSkillsResponse`, `CompiledCertificationResponse`, `CompiledProjectResponse`), summary override resolution priority over `CareerProfile.professionalSummary`, section visibility filtering (`visible = false` excluded), customizable section ordering (`ResumeSection.displayOrder ASC`), customizable item ordering within sections (`selection.displayOrder ASC`), batch resolution of source records via `findAllById` IN queries avoiding N+1 overhead, safe tolerance of deleted or missing source records, read-only transaction boundary (`@Transactional(readOnly = true)`), strict user identity scoping and dual ownership verification (`resume.userId == user && source.userId == user`), Micrometer compilation timer/counters (`devsphere_resume_compilation_duration`, `devsphere_resume_compilation_total`), ADR 0033 ([`docs/decisions/0033-resume-compilation-engine.md`](file:///docs/decisions/0033-resume-compilation-engine.md)), and architecture documentation ([`docs/architecture/resume-compilation.md`](file:///docs/architecture/resume-compilation.md)).
@@ -52,15 +53,11 @@ Resume Profile
     ↓
 Resume Compilation
     ↓
-HTML Renderer (HtmlResumeRenderer)
-    ↓
-HTML Preview
-    ↓
-PDF Renderer (OpenHtmlToPdfResumeRenderer)
-    ↓
-PDF Export
-    ↓
-Future DOCX / ATS / AI
+        ├── HTML Renderer → HTML Preview
+        ├── PDF Renderer  → PDF Export
+        └── DOCX Renderer → DOCX Export
+                    ↓
+             Future ATS / AI
 ```
 
 ## Environment Promotion & Kubernetes Architecture

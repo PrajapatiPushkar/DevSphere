@@ -1,8 +1,10 @@
 package com.devsphere.user.controller;
 
+import com.devsphere.user.dto.DocxExportResult;
 import com.devsphere.user.dto.PdfExportResult;
 import com.devsphere.user.exception.UnauthorizedException;
 import com.devsphere.user.security.UserPrincipal;
+import com.devsphere.user.service.ResumeDocxRenderingService;
 import com.devsphere.user.service.ResumePdfRenderingService;
 import com.devsphere.user.service.ResumeRenderingService;
 import org.springframework.http.ContentDisposition;
@@ -22,14 +24,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class ResumeRenderingController {
 
     private static final String AUTH_USER_ID_HEADER = "X-Authenticated-User-Id";
+    private static final String DOCX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
     private final ResumeRenderingService resumeRenderingService;
     private final ResumePdfRenderingService resumePdfRenderingService;
+    private final ResumeDocxRenderingService resumeDocxRenderingService;
 
     public ResumeRenderingController(ResumeRenderingService resumeRenderingService,
-                                      ResumePdfRenderingService resumePdfRenderingService) {
+                                       ResumePdfRenderingService resumePdfRenderingService,
+                                       ResumeDocxRenderingService resumeDocxRenderingService) {
         this.resumeRenderingService = resumeRenderingService;
         this.resumePdfRenderingService = resumePdfRenderingService;
+        this.resumeDocxRenderingService = resumeDocxRenderingService;
     }
 
     @GetMapping(value = "/{resumeId}/render/html", produces = MediaType.TEXT_HTML_VALUE + ";charset=UTF-8")
@@ -59,6 +65,22 @@ public class ResumeRenderingController {
                 .build());
 
         return ResponseEntity.ok().headers(headers).body(pdfExportResult.getPdfBytes());
+    }
+
+    @GetMapping(value = "/{resumeId}/render/docx", produces = DOCX_MEDIA_TYPE)
+    public ResponseEntity<byte[]> renderDocx(
+            @RequestHeader(value = AUTH_USER_ID_HEADER, required = false) String authUserIdHeader,
+            @PathVariable Long resumeId) {
+        Long userId = extractAndValidateUserId(authUserIdHeader);
+        DocxExportResult docxExportResult = resumeDocxRenderingService.exportDocxResume(resumeId, userId);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(DOCX_MEDIA_TYPE));
+        headers.setContentDisposition(ContentDisposition.attachment()
+                .filename(docxExportResult.getFilename())
+                .build());
+
+        return ResponseEntity.ok().headers(headers).body(docxExportResult.getDocxBytes());
     }
 
     private Long extractAndValidateUserId(String authUserIdHeader) {

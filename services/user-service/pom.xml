@@ -22,6 +22,7 @@
         <spring-cloud.version>2023.0.1</spring-cloud.version>
         <jjwt.version>0.12.5</jjwt.version>
         <openhtmltopdf.version>1.0.10</openhtmltopdf.version>
+        <poi.version>5.2.5</poi.version>
     </properties>
 
     <dependencyManagement>
@@ -135,6 +136,13 @@
             <groupId>com.openhtmltopdf</groupId>
             <artifactId>openhtmltopdf-pdfbox</artifactId>
             <version>${openhtmltopdf.version}</version>
+        </dependency>
+
+        <!-- DOCX Generation -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>${poi.version}</version>
         </dependency>
 
         <!-- Testing Dependencies -->

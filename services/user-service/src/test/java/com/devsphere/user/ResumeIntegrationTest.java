@@ -82,6 +82,8 @@ class ResumeIntegrationTest {
     private com.devsphere.user.service.ResumeRenderingService resumeRenderingService;
     @Autowired
     private com.devsphere.user.service.ResumePdfRenderingService resumePdfRenderingService;
+    @Autowired
+    private com.devsphere.user.service.ResumeDocxRenderingService resumeDocxRenderingService;
 
     @Autowired
     private ExperienceService experienceService;
@@ -397,5 +399,114 @@ class ResumeIntegrationTest {
         assertThatThrownBy(() -> resumePdfRenderingService.exportPdfResume(profileA.getId(), userB))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Resume profile not found");
+    }
+
+    @Test
+    void docxRenderingPipeline_rendersDocxDocumentEndToEnd() throws Exception {
+        Long userId = 1016L;
+
+        ExperienceResponse exp = experienceService.createExperience(userId, new ExperienceRequest("Tech Solutions", "Lead Backend Engineer", EmploymentType.FULL_TIME, "New York", LocalDate.of(2021, 1, 1), null, true, "Designed cloud services", 0));
+        EducationResponse edu = educationService.createEducation(userId, new EducationRequest("MIT", "Master of Science", "Computer Science", "Cambridge", LocalDate.of(2019, 9, 1), LocalDate.of(2021, 5, 1), false, "Thesis on distributed systems", 0));
+        SkillResponse skill = skillService.createSkill(userId, new SkillRequest("Java", SkillCategory.PROGRAMMING_LANGUAGE, Proficiency.EXPERT, 6, 0));
+        CertificationResponse cert = certificationService.createCertification(userId, new CertificationRequest("AWS Security", "Amazon", LocalDate.now(), null, null, null, null, 0));
+        ProjectResponse proj = projectService.createProject(userId, new CreateProjectRequest("DevSphere Engine", "Platform Engine", ProjectType.PERSONAL, "https://github.com/devsphere", null, null, List.of("Java"), null, null));
+
+        ResumeProfileResponse profile = resumeProfileService.createResumeProfile(userId, new ResumeProfileRequest("Java Resume", "Principal Architect", "Extensive Enterprise Experience", ResumeTemplate.PROFESSIONAL));
+
+        resumeSelectionService.addExperience(profile.getId(), userId, new ResumeExperienceRequest(exp.getId(), 1));
+        resumeSelectionService.addEducation(profile.getId(), userId, new ResumeEducationRequest(edu.getId(), 2));
+        resumeSelectionService.addSkill(profile.getId(), userId, new ResumeSkillRequest(skill.getId(), 3));
+        resumeSelectionService.addCertification(profile.getId(), userId, new ResumeCertificationRequest(cert.getId(), 4));
+        resumeSelectionService.addProject(profile.getId(), userId, new ResumeProjectRequest(proj.getId(), 5));
+
+        com.devsphere.user.dto.DocxExportResult exportResult = resumeDocxRenderingService.exportDocxResume(profile.getId(), userId);
+
+        assertThat(exportResult.getFilename()).isEqualTo("Java Resume.docx");
+        byte[] docxBytes = exportResult.getDocxBytes();
+
+        assertThat(docxBytes).isNotNull();
+        assertThat(docxBytes.length).isGreaterThan(0);
+
+        try (org.apache.poi.xwpf.usermodel.XWPFDocument document = new org.apache.poi.xwpf.usermodel.XWPFDocument(new java.io.ByteArrayInputStream(docxBytes))) {
+            assertThat(document.getParagraphs()).isNotEmpty();
+
+            StringBuilder sb = new StringBuilder();
+            for (org.apache.poi.xwpf.usermodel.XWPFParagraph p : document.getParagraphs()) {
+                sb.append(p.getText()).append("\n");
+            }
+            String text = sb.toString();
+
+            assertThat(text).contains("Java Resume");
+            assertThat(text).contains("Principal Architect");
+            assertThat(text).contains("Extensive Enterprise Experience");
+            assertThat(text).contains("Tech Solutions");
+            assertThat(text).contains("MIT");
+            assertThat(text).contains("Java");
+            assertThat(text).contains("AWS Security");
+            assertThat(text).contains("DevSphere Engine");
+        }
+    }
+
+    @Test
+    void docxRenderingPipeline_crossUserRenderingReturnsNotFound() {
+        Long userA = 1017L;
+        Long userB = 1018L;
+
+        ResumeProfileResponse profileA = resumeProfileService.createResumeProfile(userA, new ResumeProfileRequest("Resume A", "Role A", null, ResumeTemplate.MINIMAL));
+
+        assertThatThrownBy(() -> resumeDocxRenderingService.exportDocxResume(profileA.getId(), userB))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Resume profile not found");
+    }
+
+    @Test
+    void documentFormatsContentConsistency_htmlPdfDocxContainSameCompiledData() throws Exception {
+        Long userId = 1019L;
+
+        ExperienceResponse exp = experienceService.createExperience(userId, new ExperienceRequest("Cloud Core Corp", "Lead Backend Architect", EmploymentType.FULL_TIME, "Seattle", LocalDate.of(2020, 1, 1), null, true, "Designed multi-tenant microservices", 0));
+        ProjectResponse proj = projectService.createProject(userId, new CreateProjectRequest("DevSphere Platform", "Developer Platform", ProjectType.OPEN_SOURCE, "https://github.com/devsphere/platform", null, null, List.of("Java", "Spring Boot"), null, null));
+
+        ResumeProfileResponse profile = resumeProfileService.createResumeProfile(userId, new ResumeProfileRequest("Pushkar Consistency Test", "Staff Systems Engineer", "Architecting multi-format document engine", ResumeTemplate.MODERN));
+
+        resumeSelectionService.addExperience(profile.getId(), userId, new ResumeExperienceRequest(exp.getId(), 1));
+        resumeSelectionService.addProject(profile.getId(), userId, new ResumeProjectRequest(proj.getId(), 2));
+
+        // 1. HTML Rendering
+        String htmlText = resumeRenderingService.renderHtmlResume(profile.getId(), userId);
+
+        // 2. PDF Rendering
+        byte[] pdfBytes = resumePdfRenderingService.renderPdfResume(profile.getId(), userId);
+        String pdfText;
+        try (org.apache.pdfbox.pdmodel.PDDocument pdfDoc = org.apache.pdfbox.pdmodel.PDDocument.load(pdfBytes)) {
+            org.apache.pdfbox.text.PDFTextStripper stripper = new org.apache.pdfbox.text.PDFTextStripper();
+            pdfText = stripper.getText(pdfDoc);
+        }
+
+        // 3. DOCX Rendering
+        byte[] docxBytes = resumeDocxRenderingService.renderDocxResume(profile.getId(), userId);
+        String docxText;
+        try (org.apache.poi.xwpf.usermodel.XWPFDocument docxDoc = new org.apache.poi.xwpf.usermodel.XWPFDocument(new java.io.ByteArrayInputStream(docxBytes))) {
+            StringBuilder sb = new StringBuilder();
+            for (org.apache.poi.xwpf.usermodel.XWPFParagraph p : docxDoc.getParagraphs()) {
+                sb.append(p.getText()).append("\n");
+            }
+            docxText = sb.toString();
+        }
+
+        // Verify key representative fields exist in all 3 formats
+        List<String> keyStrings = List.of(
+                "Pushkar Consistency Test",
+                "Staff Systems Engineer",
+                "Architecting multi-format document engine",
+                "Cloud Core Corp",
+                "Lead Backend Architect",
+                "DevSphere Platform"
+        );
+
+        for (String key : keyStrings) {
+            assertThat(htmlText).as("HTML format should contain: " + key).contains(key);
+            assertThat(pdfText).as("PDF format should contain: " + key).contains(key);
+            assertThat(docxText).as("DOCX format should contain: " + key).contains(key);
+        }
     }
 }

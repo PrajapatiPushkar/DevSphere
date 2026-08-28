@@ -1,8 +1,10 @@
 package com.devsphere.user.controller;
 
+import com.devsphere.user.dto.DocxExportResult;
 import com.devsphere.user.dto.PdfExportResult;
 import com.devsphere.user.exception.GlobalExceptionHandler;
 import com.devsphere.user.exception.ResourceNotFoundException;
+import com.devsphere.user.service.ResumeDocxRenderingService;
 import com.devsphere.user.service.ResumePdfRenderingService;
 import com.devsphere.user.service.ResumeRenderingService;
 import org.junit.jupiter.api.Test;
@@ -25,6 +27,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(GlobalExceptionHandler.class)
 class ResumeRenderingControllerTest {
 
+    private static final String DOCX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -33,6 +37,9 @@ class ResumeRenderingControllerTest {
 
     @MockBean
     private ResumePdfRenderingService resumePdfRenderingService;
+
+    @MockBean
+    private ResumeDocxRenderingService resumeDocxRenderingService;
 
     @MockBean(name = "userSecurity")
     private com.devsphere.user.security.UserSecurity userSecurity;
@@ -89,6 +96,44 @@ class ResumeRenderingControllerTest {
                 .thenThrow(new ResourceNotFoundException("Resume profile not found"));
 
         mockMvc.perform(get("/api/v1/resumes/{resumeId}/render/pdf", resumeId)
+                        .header("X-Authenticated-User-Id", userId))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void renderDocx_returns200OKAndWordDocumentWithAttachmentHeader() throws Exception {
+        Long userId = 100L;
+        Long resumeId = 50L;
+        byte[] mockDocx = "PK\u0003\u0004 mock docx binary content".getBytes();
+        DocxExportResult exportResult = new DocxExportResult(mockDocx, "Pushkar_Resume.docx");
+
+        when(resumeDocxRenderingService.exportDocxResume(resumeId, userId)).thenReturn(exportResult);
+
+        mockMvc.perform(get("/api/v1/resumes/{resumeId}/render/docx", resumeId)
+                        .header("X-Authenticated-User-Id", userId))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.parseMediaType(DOCX_MEDIA_TYPE)))
+                .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"Pushkar_Resume.docx\""))
+                .andExpect(content().bytes(mockDocx));
+    }
+
+    @Test
+    void renderDocx_unauthenticated_returns401() throws Exception {
+        Long resumeId = 50L;
+
+        mockMvc.perform(get("/api/v1/resumes/{resumeId}/render/docx", resumeId))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void renderDocx_crossUserOrNotFound_returns404() throws Exception {
+        Long userId = 100L;
+        Long resumeId = 999L;
+
+        when(resumeDocxRenderingService.exportDocxResume(resumeId, userId))
+                .thenThrow(new ResourceNotFoundException("Resume profile not found"));
+
+        mockMvc.perform(get("/api/v1/resumes/{resumeId}/render/docx", resumeId)
                         .header("X-Authenticated-User-Id", userId))
                 .andExpect(status().isNotFound());
     }

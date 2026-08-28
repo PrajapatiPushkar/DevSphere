@@ -4,7 +4,6 @@ import java.util.Locale;
 
 public class ResumeFilenameSanitizer {
 
-    private static final String DEFAULT_FILENAME = "resume.pdf";
     private static final int MAX_LENGTH = 100;
 
     private ResumeFilenameSanitizer() {
@@ -12,8 +11,18 @@ public class ResumeFilenameSanitizer {
     }
 
     public static String sanitizeFilename(String input) {
+        return sanitizeFilename(input, "pdf");
+    }
+
+    public static String sanitizeFilename(String input, String extension) {
+        String ext = (extension != null && !extension.isBlank()) ? extension.trim().toLowerCase(Locale.ENGLISH) : "pdf";
+        if (ext.startsWith(".")) {
+            ext = ext.substring(1);
+        }
+        String defaultFilename = "resume." + ext;
+
         if (input == null || input.isBlank()) {
-            return DEFAULT_FILENAME;
+            return defaultFilename;
         }
 
         // Remove control characters, CR, LF, null bytes
@@ -35,16 +44,17 @@ public class ResumeFilenameSanitizer {
         sanitized = sanitized.trim().replaceAll("^[.\\s]+|[.\\s]+$", "");
 
         if (sanitized.isBlank()) {
-            return DEFAULT_FILENAME;
+            return defaultFilename;
         }
 
-        // Strip existing .pdf if present before enforcing max length
-        if (sanitized.toLowerCase(Locale.ENGLISH).endsWith(".pdf")) {
-            sanitized = sanitized.substring(0, sanitized.length() - 4).trim();
+        // Strip existing target extension if present before enforcing max length
+        String extSuffix = "." + ext;
+        if (sanitized.toLowerCase(Locale.ENGLISH).endsWith(extSuffix)) {
+            sanitized = sanitized.substring(0, sanitized.length() - extSuffix.length()).trim();
         }
 
         if (sanitized.isBlank()) {
-            return DEFAULT_FILENAME;
+            return defaultFilename;
         }
 
         // Truncate if exceeds max length
@@ -52,6 +62,6 @@ public class ResumeFilenameSanitizer {
             sanitized = sanitized.substring(0, MAX_LENGTH).trim();
         }
 
-        return sanitized + ".pdf";
+        return sanitized + "." + ext;
     }
 }
