@@ -34,8 +34,8 @@ public class HtmlResumeRenderer implements ResumeRenderer {
         html.append("<!DOCTYPE html>\n");
         html.append("<html lang=\"en\">\n");
         html.append("<head>\n");
-        html.append("    <meta charset=\"UTF-8\">\n");
-        html.append("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n");
+        html.append("    <meta charset=\"UTF-8\" />\n");
+        html.append("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n");
         html.append("    <title>").append(escapeHtml(compiledResume.getName())).append("</title>\n");
         html.append(generateStylesheet(template));
         html.append("</head>\n");
@@ -122,7 +122,7 @@ public class HtmlResumeRenderer implements ResumeRenderer {
             }
             html.append("                        <span class=\"date-range\">")
                     .append(formatDate(exp.getStartDate()))
-                    .append(" &ndash; ")
+                    .append(" &#8211; ")
                     .append(Boolean.TRUE.equals(exp.getCurrentlyWorking()) || exp.getEndDate() == null ? "Present" : formatDate(exp.getEndDate()))
                     .append("</span>\n");
             html.append("                    </div>\n");
@@ -160,7 +160,7 @@ public class HtmlResumeRenderer implements ResumeRenderer {
             }
             html.append("                        <span class=\"date-range\">")
                     .append(formatDate(edu.getStartDate()))
-                    .append(" &ndash; ")
+                    .append(" &#8211; ")
                     .append(Boolean.TRUE.equals(edu.getCurrentlyStudying()) || edu.getEndDate() == null ? "Present" : formatDate(edu.getEndDate()))
                     .append("</span>\n");
             html.append("                    </div>\n");
@@ -285,6 +285,9 @@ public class HtmlResumeRenderer implements ResumeRenderer {
 
     @SuppressWarnings("unchecked")
     private <T> List<T> extractItems(Object content) {
+        if (content instanceof List<?> list) {
+            return (List<T>) list;
+        }
         if (content instanceof Map<?, ?> map && map.containsKey("items") && map.get("items") instanceof List<?> list) {
             return (List<T>) list;
         }
@@ -350,6 +353,8 @@ public class HtmlResumeRenderer implements ResumeRenderer {
             css.append("        .template-professional .section-title { color: #1e40af; }\n");
         }
 
+        css.append("        @page { size: A4 portrait; margin: 15mm; }\n");
+        css.append("        .section-title, .experience-item, .education-item, .certification-item, .project-item { page-break-inside: avoid; break-inside: avoid; }\n");
         css.append("        @media print {\n");
         css.append("            body { background: none; padding: 0; color: #000000; }\n");
         css.append("            .resume-container { box-shadow: none; padding: 0; max-width: 100%; }\n");

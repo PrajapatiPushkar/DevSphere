@@ -80,6 +80,8 @@ class ResumeIntegrationTest {
     private com.devsphere.user.service.ResumeCompilationService resumeCompilationService;
     @Autowired
     private com.devsphere.user.service.ResumeRenderingService resumeRenderingService;
+    @Autowired
+    private com.devsphere.user.service.ResumePdfRenderingService resumePdfRenderingService;
 
     @Autowired
     private ExperienceService experienceService;
@@ -343,13 +345,56 @@ class ResumeIntegrationTest {
     }
 
     @Test
-    void htmlRenderingPipeline_crossUserRenderingReturnsNotFound() {
-        Long userA = 1011L;
-        Long userB = 1012L;
+    void pdfRenderingPipeline_rendersPdfDocumentEndToEnd() throws Exception {
+        Long userId = 1013L;
+
+        ExperienceResponse exp = experienceService.createExperience(userId, new ExperienceRequest("Tech Solutions", "Lead Backend Engineer", EmploymentType.FULL_TIME, "New York", LocalDate.of(2021, 1, 1), null, true, "Designed cloud services", 0));
+        EducationResponse edu = educationService.createEducation(userId, new EducationRequest("MIT", "Master of Science", "Computer Science", "Cambridge", LocalDate.of(2019, 9, 1), LocalDate.of(2021, 5, 1), false, "Thesis on distributed systems", 0));
+        SkillResponse skill = skillService.createSkill(userId, new SkillRequest("Java", SkillCategory.PROGRAMMING_LANGUAGE, Proficiency.EXPERT, 6, 0));
+        CertificationResponse cert = certificationService.createCertification(userId, new CertificationRequest("AWS Security", "Amazon", LocalDate.now(), null, null, null, null, 0));
+        ProjectResponse proj = projectService.createProject(userId, new CreateProjectRequest("DevSphere Engine", "Platform Engine", ProjectType.PERSONAL, "https://github.com/devsphere", null, null, List.of("Java"), null, null));
+
+        ResumeProfileResponse profile = resumeProfileService.createResumeProfile(userId, new ResumeProfileRequest("Java Resume", "Principal Architect", "Extensive Enterprise Experience", ResumeTemplate.PROFESSIONAL));
+
+        resumeSelectionService.addExperience(profile.getId(), userId, new ResumeExperienceRequest(exp.getId(), 1));
+        resumeSelectionService.addEducation(profile.getId(), userId, new ResumeEducationRequest(edu.getId(), 2));
+        resumeSelectionService.addSkill(profile.getId(), userId, new ResumeSkillRequest(skill.getId(), 3));
+        resumeSelectionService.addCertification(profile.getId(), userId, new ResumeCertificationRequest(cert.getId(), 4));
+        resumeSelectionService.addProject(profile.getId(), userId, new ResumeProjectRequest(proj.getId(), 5));
+
+        com.devsphere.user.dto.PdfExportResult exportResult = resumePdfRenderingService.exportPdfResume(profile.getId(), userId);
+
+        assertThat(exportResult.getFilename()).isEqualTo("Java Resume.pdf");
+        byte[] pdfBytes = exportResult.getPdfBytes();
+
+        assertThat(pdfBytes).isNotNull();
+        assertThat(pdfBytes.length).isGreaterThan(0);
+
+        try (org.apache.pdfbox.pdmodel.PDDocument document = org.apache.pdfbox.pdmodel.PDDocument.load(pdfBytes)) {
+            assertThat(document.getNumberOfPages()).isGreaterThanOrEqualTo(1);
+
+            org.apache.pdfbox.text.PDFTextStripper stripper = new org.apache.pdfbox.text.PDFTextStripper();
+            String text = stripper.getText(document);
+
+            assertThat(text).contains("Java Resume");
+            assertThat(text).contains("Principal Architect");
+            assertThat(text).contains("Extensive Enterprise Experience");
+            assertThat(text).contains("Tech Solutions");
+            assertThat(text).contains("MIT");
+            assertThat(text).contains("Java");
+            assertThat(text).contains("AWS Security");
+            assertThat(text).contains("DevSphere Engine");
+        }
+    }
+
+    @Test
+    void pdfRenderingPipeline_crossUserRenderingReturnsNotFound() {
+        Long userA = 1014L;
+        Long userB = 1015L;
 
         ResumeProfileResponse profileA = resumeProfileService.createResumeProfile(userA, new ResumeProfileRequest("Resume A", "Role A", null, ResumeTemplate.MINIMAL));
 
-        assertThatThrownBy(() -> resumeRenderingService.renderHtmlResume(profileA.getId(), userB))
+        assertThatThrownBy(() -> resumePdfRenderingService.exportPdfResume(profileA.getId(), userB))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Resume profile not found");
     }

@@ -1,8 +1,11 @@
 package com.devsphere.user.controller;
 
+import com.devsphere.user.dto.PdfExportResult;
 import com.devsphere.user.exception.UnauthorizedException;
 import com.devsphere.user.security.UserPrincipal;
+import com.devsphere.user.service.ResumePdfRenderingService;
 import com.devsphere.user.service.ResumeRenderingService;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,9 +24,12 @@ public class ResumeRenderingController {
     private static final String AUTH_USER_ID_HEADER = "X-Authenticated-User-Id";
 
     private final ResumeRenderingService resumeRenderingService;
+    private final ResumePdfRenderingService resumePdfRenderingService;
 
-    public ResumeRenderingController(ResumeRenderingService resumeRenderingService) {
+    public ResumeRenderingController(ResumeRenderingService resumeRenderingService,
+                                      ResumePdfRenderingService resumePdfRenderingService) {
         this.resumeRenderingService = resumeRenderingService;
+        this.resumePdfRenderingService = resumePdfRenderingService;
     }
 
     @GetMapping(value = "/{resumeId}/render/html", produces = MediaType.TEXT_HTML_VALUE + ";charset=UTF-8")
@@ -37,6 +43,22 @@ public class ResumeRenderingController {
         headers.setContentType(MediaType.parseMediaType("text/html;charset=UTF-8"));
 
         return ResponseEntity.ok().headers(headers).body(html);
+    }
+
+    @GetMapping(value = "/{resumeId}/render/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> renderPdf(
+            @RequestHeader(value = AUTH_USER_ID_HEADER, required = false) String authUserIdHeader,
+            @PathVariable Long resumeId) {
+        Long userId = extractAndValidateUserId(authUserIdHeader);
+        PdfExportResult pdfExportResult = resumePdfRenderingService.exportPdfResume(resumeId, userId);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDisposition(ContentDisposition.attachment()
+                .filename(pdfExportResult.getFilename())
+                .build());
+
+        return ResponseEntity.ok().headers(headers).body(pdfExportResult.getPdfBytes());
     }
 
     private Long extractAndValidateUserId(String authUserIdHeader) {
