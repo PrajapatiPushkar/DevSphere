@@ -87,8 +87,73 @@ class PublicResumeIntegrationTest {
     }
 
     @Test
+    void getPublicResume_WhenArchivedOnlyVersion_Returns404() {
+        // 1. Create profile & version 1
+        ResumeProfile profile = new ResumeProfile(userId, "Cloud Engineer", "DevOps Specialist", ResumeTemplate.MODERN);
+        profile = resumeProfileRepository.save(profile);
+        com.devsphere.user.dto.ResumeVersionResponse v1 = resumeVersionService.createVersion(profile.getId(), userId, new com.devsphere.user.dto.CreateResumeVersionRequest("V1"));
+        
+        // 2. Publish version 1
+        resumeVersionService.publishVersion(profile.getId(), v1.getId(), userId);
+
+        // 3. Archive version 1 (leaving no PUBLISHED version)
+        resumeVersionService.archiveVersion(profile.getId(), v1.getId(), userId);
+
+        // 4. Verify public endpoint returns 404
+        ResponseEntity<String> response = restTemplate.getForEntity("/api/v1/public/resumes/" + profile.getPublicId(), String.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getBody()).contains("PUBLIC_RESUME_NOT_FOUND");
+    }
+
+    @Test
     void getPublicResume_WhenPublicIdUnknown_Returns404() {
         ResponseEntity<String> response = restTemplate.getForEntity("/api/v1/public/resumes/non-existent-uuid", String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(response.getBody()).contains("PUBLIC_RESUME_NOT_FOUND");
+    }
+
+    @Test
+    void securityBoundary_PublicEndpointAllowsAccessWithoutJwt_PrivateEndpointRequiresJwt() {
+        // 1. Create and publish profile
+        ResumeProfile profile = new ResumeProfile(userId, "Security Engineer", "AppSec Lead", ResumeTemplate.PROFESSIONAL);
+        profile = resumeProfileRepository.save(profile);
+        com.devsphere.user.dto.ResumeVersionResponse v1 = resumeVersionService.createVersion(profile.getId(), userId, new com.devsphere.user.dto.CreateResumeVersionRequest("V1"));
+        resumeVersionService.publishVersion(profile.getId(), v1.getId(), userId);
+
+        // 2. Access public endpoint WITHOUT JWT -> HTTP 200 OK
+        ResponseEntity<PublicResumeResponse> publicResp = restTemplate.getForEntity("/api/v1/public/resumes/" + profile.getPublicId(), PublicResumeResponse.class);
+        assertThat(publicResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(publicResp.getBody()).isNotNull();
+
+        // 3. Access private endpoint WITHOUT JWT -> HTTP 401 Unauthorized
+        ResponseEntity<String> privateResp = restTemplate.getForEntity("/api/v1/resumes/" + profile.getId(), String.class);
+        assertThat(privateResp.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    void getPublicResume_JsonOutputContainsOnlyPresentationFieldsAndNoInternalIds() {
+        ResumeProfile profile = new ResumeProfile(userId, "Cloud Engineer", "DevOps Specialist", ResumeTemplate.MODERN);
+        profile = resumeProfileRepository.save(profile);
+        com.devsphere.user.dto.ResumeVersionResponse v1 = resumeVersionService.createVersion(profile.getId(), userId, new com.devsphere.user.dto.CreateResumeVersionRequest("V1"));
+        resumeVersionService.publishVersion(profile.getId(), v1.getId(), userId);
+
+        ResponseEntity<String> rawJsonResp = restTemplate.getForEntity("/api/v1/public/resumes/" + profile.getPublicId(), String.class);
+        assertThat(rawJsonResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+        String json = rawJsonResp.getBody();
+        assertThat(json).isNotNull();
+        assertThat(json).contains("\"name\":\"Cloud Engineer\"");
+        assertThat(json).contains("\"targetRole\":\"DevOps Specialist\"");
+        assertThat(json).contains("\"template\":\"MODERN\"");
+
+        // Verify absence of sensitive/internal fields
+        assertThat(json).doesNotContain("\"id\":");
+        assertThat(json).doesNotContain("\"userId\":");
+        assertThat(json).doesNotContain("\"resumeProfileId\":");
+        assertThat(json).doesNotContain("\"versionId\":");
+        assertThat(json).doesNotContain("\"publishedAt\":");
+        assertThat(json).doesNotContain("\"createdAt\":");
+        assertThat(json).doesNotContain("\"updatedAt\":");
     }
 }
+

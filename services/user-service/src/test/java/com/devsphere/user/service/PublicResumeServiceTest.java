@@ -98,4 +98,74 @@ class PublicResumeServiceTest {
 
         verifyNoInteractions(resumeVersionService);
     }
+
+    @Test
+    void getPublicResume_WhenPublicIdNullOrBlank_ThrowsResourceNotFoundException() {
+        assertThatThrownBy(() -> publicResumeService.getPublicResume(null))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Public resume not found");
+
+        assertThatThrownBy(() -> publicResumeService.getPublicResume("   "))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Public resume not found");
+
+        verifyNoInteractions(resumeProfileRepository, resumeVersionRepository, resumeVersionService);
+    }
+
+    @Test
+    void getPublicResume_WhenPublishedVersionHasSections_SanitizesInternalIdsFromSections() {
+        String publicId = "pub-uuid-5678";
+        ResumeProfile profile = new ResumeProfile(100L, "Backend Dev", "Senior Java Engineer", ResumeTemplate.PROFESSIONAL);
+        profile.setId(10L);
+        profile.setPublicId(publicId);
+
+        ResumeVersion version = new ResumeVersion(10L, 100L, 1, "v1", "{}");
+        version.setStatus(ResumeVersionStatus.PUBLISHED);
+        version.setId(50L);
+
+        com.devsphere.user.entity.Experience exp = new com.devsphere.user.entity.Experience(
+                100L, "TechCorp", "Lead Architect", com.devsphere.user.entity.EmploymentType.FULL_TIME,
+                java.time.LocalDate.of(2020, 1, 1)
+        );
+        exp.setId(999L); // Internal database ID
+        exp.setLocation("San Francisco");
+        exp.setCurrentlyWorking(true);
+        exp.setDescription("Built scalable platforms");
+
+
+        com.devsphere.user.dto.compilation.CompiledExperienceResponse compiledExp =
+                new com.devsphere.user.dto.compilation.CompiledExperienceResponse(exp, 1);
+
+        com.devsphere.user.dto.compilation.CompiledResumeSectionResponse section =
+                new com.devsphere.user.dto.compilation.CompiledResumeSectionResponse(
+                        com.devsphere.user.entity.ResumeSectionType.EXPERIENCE, 1, true, java.util.Map.of("items", java.util.List.of(compiledExp))
+                );
+
+        CompiledResumeResponse snapshot = new CompiledResumeResponse(50L, 10L, "Backend Dev", "Senior Java Engineer", ResumeTemplate.PROFESSIONAL, java.util.List.of(section));
+
+        when(resumeProfileRepository.findByPublicId(publicId)).thenReturn(Optional.of(profile));
+        when(resumeVersionRepository.findByResumeProfileIdAndStatus(10L, ResumeVersionStatus.PUBLISHED)).thenReturn(Optional.of(version));
+        when(resumeVersionService.compileVersion(10L, 50L, 100L)).thenReturn(snapshot);
+
+        PublicResumeResponse response = publicResumeService.getPublicResume(publicId);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getSections()).hasSize(1);
+        assertThat(response.getSections().get(0).getSectionType()).isEqualTo(com.devsphere.user.entity.ResumeSectionType.EXPERIENCE);
+
+        Object content = response.getSections().get(0).getContent();
+        assertThat(content).isInstanceOf(java.util.Map.class);
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, Object> map = (java.util.Map<String, Object>) content;
+        assertThat(map).containsKey("items");
+
+        @SuppressWarnings("unchecked")
+        java.util.List<com.devsphere.user.dto.publicresume.PublicExperienceResponse> items =
+                (java.util.List<com.devsphere.user.dto.publicresume.PublicExperienceResponse>) map.get("items");
+        assertThat(items).hasSize(1);
+        assertThat(items.get(0).getCompanyName()).isEqualTo("TechCorp");
+        assertThat(items.get(0).getJobTitle()).isEqualTo("Lead Architect");
+    }
 }
+
+

@@ -11,12 +11,12 @@ public class PublicResumeResponse {
     private String name;
     private String targetRole;
     private ResumeTemplate template;
-    private List<CompiledResumeSectionResponse> sections = new ArrayList<>();
+    private List<PublicResumeSectionResponse> sections = new ArrayList<>();
 
     public PublicResumeResponse() {
     }
 
-    public PublicResumeResponse(String name, String targetRole, ResumeTemplate template, List<CompiledResumeSectionResponse> sections) {
+    public PublicResumeResponse(String name, String targetRole, ResumeTemplate template, List<PublicResumeSectionResponse> sections) {
         this.name = name;
         this.targetRole = targetRole;
         this.template = template;
@@ -28,7 +28,14 @@ public class PublicResumeResponse {
             this.name = compiled.getName();
             this.targetRole = compiled.getTargetRole();
             this.template = compiled.getTemplate();
-            this.sections = compiled.getSections() != null ? compiled.getSections() : new ArrayList<>();
+            this.sections = new ArrayList<>();
+            if (compiled.getSections() != null) {
+                for (CompiledResumeSectionResponse sec : compiled.getSections()) {
+                    if (sec != null && Boolean.TRUE.equals(sec.getVisible())) {
+                        this.sections.add(new PublicResumeSectionResponse(sec));
+                    }
+                }
+            }
         }
     }
 
@@ -56,11 +63,12 @@ public class PublicResumeResponse {
         this.template = template;
     }
 
-    public List<CompiledResumeSectionResponse> getSections() {
+    public List<PublicResumeSectionResponse> getSections() {
         return sections;
     }
 
-    public void setSections(List<CompiledResumeSectionResponse> sections) {
+    public void setSections(List<PublicResumeSectionResponse> sections) {
         this.sections = sections != null ? sections : new ArrayList<>();
     }
 }
+

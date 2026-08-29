@@ -73,8 +73,15 @@ public class PublicResumeService {
                     publicResumeId, profile.getId(), publishedVersion.getVersionNumber());
 
             return new PublicResumeResponse(snapshot);
+        } catch (ResourceNotFoundException e) {
+            throw e;
+        } catch (Exception e) {
+            meterRegistry.counter("devsphere_public_resume_access_total", "status", "failure").increment();
+            log.error("Error resolving public resume for publicId: {}", publicResumeId, e);
+            throw e;
         } finally {
             sample.stop(meterRegistry.timer("devsphere_public_resume_access_duration"));
         }
     }
 }
+
