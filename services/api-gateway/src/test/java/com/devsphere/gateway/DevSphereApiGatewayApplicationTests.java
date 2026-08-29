@@ -219,4 +219,13 @@ class DevSphereApiGatewayApplicationTests {
                 .jsonPath("$.code").isEqualTo("SERVICE_UNAVAILABLE")
                 .jsonPath("$.message").isEqualTo("User Service is temporarily unavailable. Please try again later.");
     }
+
+    @Test
+    @DisplayName("Public resume route /api/v1/public/resumes/pub-uuid allows access without JWT token at Gateway level")
+    void publicResumeRouteWithoutJwtIsAllowedAtGateway() {
+        webTestClient.get()
+                .uri("/api/v1/public/resumes/pub-uuid-1234")
+                .exchange()
+                .expectStatus().is5xxServerError(); // 503 or 500 when downstream user-service instance is not running in gateway context, NOT 401 Unauthorized!
+    }
 }

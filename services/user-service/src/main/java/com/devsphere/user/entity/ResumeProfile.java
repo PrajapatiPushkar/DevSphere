@@ -40,6 +40,9 @@ public class ResumeProfile {
     @Column(name = "status", nullable = false, length = 50)
     private ResumeStatus status = ResumeStatus.DRAFT;
 
+    @Column(name = "public_id", nullable = false, unique = true, length = 36)
+    private String publicId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -55,6 +58,7 @@ public class ResumeProfile {
         this.targetRole = targetRole;
         this.template = template;
         this.status = ResumeStatus.DRAFT;
+        this.publicId = java.util.UUID.randomUUID().toString();
     }
 
     @PrePersist
@@ -68,6 +72,9 @@ public class ResumeProfile {
         }
         if (this.status == null) {
             this.status = ResumeStatus.DRAFT;
+        }
+        if (this.publicId == null || this.publicId.isBlank()) {
+            this.publicId = java.util.UUID.randomUUID().toString();
         }
     }
 
@@ -146,5 +153,13 @@ public class ResumeProfile {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getPublicId() {
+        return publicId;
+    }
+
+    public void setPublicId(String publicId) {
+        this.publicId = publicId;
     }
 }

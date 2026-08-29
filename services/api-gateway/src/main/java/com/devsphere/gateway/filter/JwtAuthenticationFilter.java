@@ -36,7 +36,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             "/api/v1/auth/",
             "/actuator/health",
             "/api/demo/hello",
-            "/fallback/"
+            "/fallback/",
+            "/api/v1/public/"
     );
 
     private static final List<String> ADMIN_PATH_PREFIXES = List.of(

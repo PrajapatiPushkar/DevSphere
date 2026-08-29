@@ -14,6 +14,7 @@ public class ResumeProfileResponse {
     private String summaryOverride;
     private ResumeTemplate template;
     private ResumeStatus status;
+    private String publicId;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -28,6 +29,7 @@ public class ResumeProfileResponse {
         this.summaryOverride = profile.getSummaryOverride();
         this.template = profile.getTemplate();
         this.status = profile.getStatus();
+        this.publicId = profile.getPublicId();
         this.createdAt = profile.getCreatedAt();
         this.updatedAt = profile.getUpdatedAt();
     }
@@ -102,5 +104,13 @@ public class ResumeProfileResponse {
 
     public void setUpdatedAt(Instant updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public String getPublicId() {
+        return publicId;
+    }
+
+    public void setPublicId(String publicId) {
+        this.publicId = publicId;
     }
 }

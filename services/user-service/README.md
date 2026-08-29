@@ -34,6 +34,7 @@ Kafka Topic (devsphere.user.v1) ──► Consumer ──[Idempotency & Retries]
   - `GET /api/v1/resumes/{id}/versions/{versionId}/render/html`: Render published/draft version snapshot as HTML.
   - `GET /api/v1/resumes/{id}/versions/{versionId}/render/pdf`: Render published/draft version snapshot as PDF.
   - `GET /api/v1/resumes/{id}/versions/{versionId}/render/docx`: Render published/draft version snapshot as DOCX.
+  - `GET /api/v1/public/resumes/{publicResumeId}`: Unauthenticated read-only access to published resume version via opaque server-generated UUID (`public_id`), exposing presentation data (`PublicResumeResponse`) stripped of internal DB sequence IDs and private data.
 - **401 vs 403 HTTP Semantics**: Unauthenticated requests return `401 Unauthorized`. Accessing unauthorized resources returns `403 Forbidden` or `404 Not Found` for IDOR isolation.
 - **Admin Endpoint Security**: Administrative endpoints (`/api/v1/users/admin/**`) require `ROLE_ADMIN` authority.
 

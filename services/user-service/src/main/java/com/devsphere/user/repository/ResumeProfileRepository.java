@@ -18,6 +18,8 @@ public interface ResumeProfileRepository extends JpaRepository<ResumeProfile, Lo
 
     List<ResumeProfile> findAllByUserIdAndStatus(Long userId, ResumeStatus status);
 
+    Optional<ResumeProfile> findByPublicId(String publicId);
+
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @org.springframework.data.jpa.repository.Query("SELECT r FROM ResumeProfile r WHERE r.id = :id AND r.userId = :userId")
     Optional<ResumeProfile> findByIdAndUserIdForUpdate(@org.springframework.data.repository.query.Param("id") Long id, @org.springframework.data.repository.query.Param("userId") Long userId);
