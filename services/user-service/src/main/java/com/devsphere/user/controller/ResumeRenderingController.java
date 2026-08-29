@@ -115,6 +115,44 @@ public class ResumeRenderingController {
         return ResponseEntity.ok().headers(headers).body(docxExportResult.getDocxBytes());
     }
 
+    @GetMapping(value = "/{resumeId}/versions/{versionId}/render/html", produces = MediaType.TEXT_HTML_VALUE + ";charset=UTF-8")
+    public ResponseEntity<String> renderVersionHtml(
+            @RequestHeader(value = AUTH_USER_ID_HEADER, required = false) String authUserIdHeader,
+            @PathVariable Long resumeId,
+            @PathVariable Long versionId) {
+        Long userId = extractAndValidateUserId(authUserIdHeader);
+        ResumeExportResult result = resumeExportService.exportResumeVersion(resumeId, versionId, userId, ResumeExportFormat.HTML);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(result.getContentType()));
+        return ResponseEntity.ok().headers(headers).body(new String(result.getContent(), StandardCharsets.UTF_8));
+    }
+
+    @GetMapping(value = "/{resumeId}/versions/{versionId}/render/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> renderVersionPdf(
+            @RequestHeader(value = AUTH_USER_ID_HEADER, required = false) String authUserIdHeader,
+            @PathVariable Long resumeId,
+            @PathVariable Long versionId) {
+        Long userId = extractAndValidateUserId(authUserIdHeader);
+        ResumeExportResult result = resumeExportService.exportResumeVersion(resumeId, versionId, userId, ResumeExportFormat.PDF);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(result.getContentType()));
+        headers.setContentDisposition(ContentDisposition.attachment().filename(result.getFilename()).build());
+        return ResponseEntity.ok().headers(headers).body(result.getContent());
+    }
+
+    @GetMapping(value = "/{resumeId}/versions/{versionId}/render/docx", produces = DOCX_MEDIA_TYPE)
+    public ResponseEntity<byte[]> renderVersionDocx(
+            @RequestHeader(value = AUTH_USER_ID_HEADER, required = false) String authUserIdHeader,
+            @PathVariable Long resumeId,
+            @PathVariable Long versionId) {
+        Long userId = extractAndValidateUserId(authUserIdHeader);
+        ResumeExportResult result = resumeExportService.exportResumeVersion(resumeId, versionId, userId, ResumeExportFormat.DOCX);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(result.getContentType()));
+        headers.setContentDisposition(ContentDisposition.attachment().filename(result.getFilename()).build());
+        return ResponseEntity.ok().headers(headers).body(result.getContent());
+    }
+
     private Long extractAndValidateUserId(String authUserIdHeader) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof UserPrincipal userPrincipal) {

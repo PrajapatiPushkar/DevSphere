@@ -146,9 +146,6 @@ class ResumeExportServiceTest {
         assertThatThrownBy(() -> exportService.exportResume(resumeId, userId, ResumeExportFormat.PDF))
                 .isInstanceOf(ResourceNotFoundException.class);
 
-        assertThat(meterRegistry.find("devsphere_resume_export_total")
-                .tag("status", "failure")
-                .tag("format", "pdf")
-                .counter().count()).isEqualTo(1.0);
+        assertThat(meterRegistry.counter("devsphere_resume_export_total", "status", "failure", "format", "pdf", "template", "professional").count()).isEqualTo(1.0);
     }
 }

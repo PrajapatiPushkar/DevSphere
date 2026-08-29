@@ -24,6 +24,7 @@ public class ResumeExportService {
     private static final long DEFAULT_MAX_SIZE_BYTES = 10485760L; // 10MB default
 
     private final ResumeCompilationService resumeCompilationService;
+    private final ResumeVersionService resumeVersionService;
     private final ResumeRenderer htmlResumeRenderer;
     private final PdfResumeRenderer pdfResumeRenderer;
     private final DocxResumeRenderer docxResumeRenderer;
@@ -34,17 +35,36 @@ public class ResumeExportService {
                                ResumeRenderer htmlResumeRenderer,
                                PdfResumeRenderer pdfResumeRenderer,
                                DocxResumeRenderer docxResumeRenderer) {
-        this(resumeCompilationService, htmlResumeRenderer, pdfResumeRenderer, docxResumeRenderer, new SimpleMeterRegistry(), DEFAULT_MAX_SIZE_BYTES);
+        this(resumeCompilationService, null, htmlResumeRenderer, pdfResumeRenderer, docxResumeRenderer, new SimpleMeterRegistry(), DEFAULT_MAX_SIZE_BYTES);
+    }
+
+    public ResumeExportService(ResumeCompilationService resumeCompilationService,
+                               ResumeRenderer htmlResumeRenderer,
+                               PdfResumeRenderer pdfResumeRenderer,
+                               DocxResumeRenderer docxResumeRenderer,
+                               MeterRegistry meterRegistry,
+                               long maxSizeBytes) {
+        this(resumeCompilationService, null, htmlResumeRenderer, pdfResumeRenderer, docxResumeRenderer, meterRegistry, maxSizeBytes);
+    }
+
+    public ResumeExportService(ResumeCompilationService resumeCompilationService,
+                               ResumeVersionService resumeVersionService,
+                               ResumeRenderer htmlResumeRenderer,
+                               PdfResumeRenderer pdfResumeRenderer,
+                               DocxResumeRenderer docxResumeRenderer) {
+        this(resumeCompilationService, resumeVersionService, htmlResumeRenderer, pdfResumeRenderer, docxResumeRenderer, new SimpleMeterRegistry(), DEFAULT_MAX_SIZE_BYTES);
     }
 
     @Autowired
     public ResumeExportService(ResumeCompilationService resumeCompilationService,
+                               ResumeVersionService resumeVersionService,
                                ResumeRenderer htmlResumeRenderer,
                                PdfResumeRenderer pdfResumeRenderer,
                                DocxResumeRenderer docxResumeRenderer,
                                MeterRegistry meterRegistry,
                                @Value("${app.resume.export.max-size-bytes:10485760}") long maxSizeBytes) {
         this.resumeCompilationService = resumeCompilationService;
+        this.resumeVersionService = resumeVersionService;
         this.htmlResumeRenderer = htmlResumeRenderer;
         this.pdfResumeRenderer = pdfResumeRenderer;
         this.docxResumeRenderer = docxResumeRenderer;
@@ -53,15 +73,45 @@ public class ResumeExportService {
     }
 
     public ResumeExportResult exportResume(Long resumeId, Long userId, ResumeExportFormat format) {
-        if (format == null) {
-            format = ResumeExportFormat.PDF;
+        ResumeExportFormat actualFormat = format != null ? format : ResumeExportFormat.PDF;
+        CompiledResumeResponse compiled;
+        try {
+            compiled = resumeCompilationService.compileResume(resumeId, userId);
+        } catch (Exception e) {
+            meterRegistry.counter("devsphere_resume_export_total",
+                    "status", "failure",
+                    "format", actualFormat.name().toLowerCase(),
+                    "template", "professional"
+            ).increment();
+            throw e;
         }
+        return doExport(compiled, actualFormat, "resumeId: " + resumeId + " for userId: " + userId);
+    }
 
+    public ResumeExportResult exportResumeVersion(Long resumeId, Long versionId, Long userId, ResumeExportFormat format) {
+        if (resumeVersionService == null) {
+            throw new IllegalStateException("ResumeVersionService is not configured");
+        }
+        ResumeExportFormat actualFormat = format != null ? format : ResumeExportFormat.PDF;
+        CompiledResumeResponse compiled;
+        try {
+            compiled = resumeVersionService.compileVersion(resumeId, versionId, userId);
+        } catch (Exception e) {
+            meterRegistry.counter("devsphere_resume_export_total",
+                    "status", "failure",
+                    "format", actualFormat.name().toLowerCase(),
+                    "template", "professional"
+            ).increment();
+            throw e;
+        }
+        return doExport(compiled, actualFormat, "versionId: " + versionId + " (resumeId: " + resumeId + ") for userId: " + userId);
+    }
+
+    private ResumeExportResult doExport(CompiledResumeResponse compiled, ResumeExportFormat format, String contextInfo) {
         Timer.Sample sample = Timer.start(meterRegistry);
         String templateName = "professional";
 
         try {
-            CompiledResumeResponse compiled = resumeCompilationService.compileResume(resumeId, userId);
             if (compiled == null) {
                 throw new IllegalArgumentException("Compiled resume must not be null");
             }
@@ -93,8 +143,8 @@ public class ResumeExportService {
                     "template", templateName
             ).increment();
 
-            log.info("Successfully exported resume ID: {} for userId: {} in format: {} (size: {} bytes, filename: {})",
-                    resumeId, userId, format.name(), content.length, filename);
+            log.info("Successfully exported {} in format: {} (size: {} bytes, filename: {})",
+                    contextInfo, format.name(), content.length, filename);
 
             return new ResumeExportResult(content, format.getMediaType(), filename, format.isAttachment());
         } catch (Exception e) {
@@ -104,7 +154,7 @@ public class ResumeExportService {
                     "template", templateName
             ).increment();
 
-            log.error("Failed to export resume ID: {} for userId: {} in format: {}", resumeId, userId, format.name(), e);
+            log.error("Failed to export {} in format: {}", contextInfo, format.name(), e);
             throw e;
         } finally {
             sample.stop(meterRegistry.timer("devsphere_resume_export_duration"));
