@@ -2,6 +2,7 @@ package com.devsphere.user.service;
 
 import com.devsphere.user.dto.compilation.CompiledResumeResponse;
 import com.devsphere.user.renderer.ResumeRenderer;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -32,6 +33,7 @@ public class ResumeRenderingService {
         this.meterRegistry = meterRegistry;
     }
 
+    @Bulkhead(name = "userProfileBulkhead")
     public String renderHtmlResume(Long resumeId, Long userId) {
         Timer.Sample sample = Timer.start(meterRegistry);
         try {

@@ -302,6 +302,51 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(response);
     }
 
+    @ExceptionHandler(io.github.resilience4j.bulkhead.BulkheadFullException.class)
+    public ResponseEntity<ErrorResponse> handleBulkheadFull(io.github.resilience4j.bulkhead.BulkheadFullException ex, HttpServletRequest request) {
+        log.warn("Bulkhead limit reached for path {}: {}", getPath(request), ex.getMessage());
+        ErrorResponse response = new ErrorResponse(
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                HttpStatus.SERVICE_UNAVAILABLE.name(),
+                "BULKHEAD_LIMIT_EXCEEDED",
+                "System rate or concurrency limit exceeded. Please try again later.",
+                getPath(request),
+                null,
+                getTraceId()
+        );
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
+    }
+
+    @ExceptionHandler(io.github.resilience4j.circuitbreaker.CallNotPermittedException.class)
+    public ResponseEntity<ErrorResponse> handleCallNotPermitted(io.github.resilience4j.circuitbreaker.CallNotPermittedException ex, HttpServletRequest request) {
+        log.warn("Circuit breaker OPEN for path {}: {}", getPath(request), ex.getMessage());
+        ErrorResponse response = new ErrorResponse(
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                HttpStatus.SERVICE_UNAVAILABLE.name(),
+                "DOWNSTREAM_SERVICE_UNAVAILABLE",
+                "Downstream service circuit breaker is OPEN",
+                getPath(request),
+                null,
+                getTraceId()
+        );
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
+    }
+
+    @ExceptionHandler({io.github.resilience4j.timelimiter.RequestTimeoutException.class, java.util.concurrent.TimeoutException.class})
+    public ResponseEntity<ErrorResponse> handleTimeout(Exception ex, HttpServletRequest request) {
+        log.warn("Request timed out for path {}: {}", getPath(request), ex.getMessage());
+        ErrorResponse response = new ErrorResponse(
+                HttpStatus.GATEWAY_TIMEOUT.value(),
+                HttpStatus.GATEWAY_TIMEOUT.name(),
+                "DOWNSTREAM_TIMEOUT",
+                "Operation timed out while processing request",
+                getPath(request),
+                null,
+                getTraceId()
+        );
+        return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT).body(response);
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGenericException(Exception ex, HttpServletRequest request) {
         log.error("Unhandled exception in User Service for path {}: {}", getPath(request), ex.getMessage(), ex);

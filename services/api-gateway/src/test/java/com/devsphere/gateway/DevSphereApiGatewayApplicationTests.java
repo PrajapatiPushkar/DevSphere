@@ -202,7 +202,7 @@ class DevSphereApiGatewayApplicationTests {
                 .expectBody()
                 .jsonPath("$.status").isEqualTo(503)
                 .jsonPath("$.error").isEqualTo("SERVICE_UNAVAILABLE")
-                .jsonPath("$.code").isEqualTo("SERVICE_UNAVAILABLE")
+                .jsonPath("$.code").isEqualTo("DOWNSTREAM_SERVICE_UNAVAILABLE")
                 .jsonPath("$.message").isEqualTo("Auth Service is temporarily unavailable. Please try again later.");
     }
 
@@ -216,7 +216,7 @@ class DevSphereApiGatewayApplicationTests {
                 .expectBody()
                 .jsonPath("$.status").isEqualTo(503)
                 .jsonPath("$.error").isEqualTo("SERVICE_UNAVAILABLE")
-                .jsonPath("$.code").isEqualTo("SERVICE_UNAVAILABLE")
+                .jsonPath("$.code").isEqualTo("DOWNSTREAM_SERVICE_UNAVAILABLE")
                 .jsonPath("$.message").isEqualTo("User Service is temporarily unavailable. Please try again later.");
     }
 
