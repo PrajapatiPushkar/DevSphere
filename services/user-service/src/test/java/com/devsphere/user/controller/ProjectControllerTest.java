@@ -26,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
@@ -163,7 +164,7 @@ class ProjectControllerTest {
                 new PageImpl<>(List.of(new ProjectResponse(p1), new ProjectResponse(p2)), PageRequest.of(0, 20), 2)
         );
 
-        when(projectService.listProjects(eq(userId), any(), any(), anyInt(), anyInt()))
+        when(projectService.listProjects(eq(userId), any(), any(), anyInt(), anyInt(), anyString()))
                 .thenReturn(pageResponse);
 
         mockMvc.perform(get("/api/v1/projects")

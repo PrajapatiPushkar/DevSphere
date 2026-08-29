@@ -9,12 +9,19 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
 
 @Entity
-@Table(name = "goals")
+@Table(
+    name = "goals",
+    indexes = {
+        @Index(name = "idx_goals_user_status", columnList = "user_id, status"),
+        @Index(name = "idx_goals_user_created", columnList = "user_id, created_at")
+    }
+)
 public class Goal {
 
     @Id

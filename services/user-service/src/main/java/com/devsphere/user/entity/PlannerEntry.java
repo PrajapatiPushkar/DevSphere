@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
@@ -18,6 +19,9 @@ import java.time.LocalTime;
     name = "planner_entries",
     uniqueConstraints = {
         @UniqueConstraint(name = "uk_planner_user_task_date", columnNames = {"user_id", "task_id", "planned_date"})
+    },
+    indexes = {
+        @Index(name = "idx_planner_user_date", columnList = "user_id, planned_date")
     }
 )
 public class PlannerEntry {

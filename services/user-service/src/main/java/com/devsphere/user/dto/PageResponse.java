@@ -10,17 +10,23 @@ public class PageResponse<T> {
     private int pageSize;
     private long totalElements;
     private int totalPages;
+    private boolean first;
     private boolean last;
 
     public PageResponse() {
     }
 
     public PageResponse(List<T> content, int pageNumber, int pageSize, long totalElements, int totalPages, boolean last) {
+        this(content, pageNumber, pageSize, totalElements, totalPages, pageNumber == 0, last);
+    }
+
+    public PageResponse(List<T> content, int pageNumber, int pageSize, long totalElements, int totalPages, boolean first, boolean last) {
         this.content = content;
         this.pageNumber = pageNumber;
         this.pageSize = pageSize;
         this.totalElements = totalElements;
         this.totalPages = totalPages;
+        this.first = first;
         this.last = last;
     }
 
@@ -31,6 +37,7 @@ public class PageResponse<T> {
                 page.getSize(),
                 page.getTotalElements(),
                 page.getTotalPages(),
+                page.isFirst(),
                 page.isLast()
         );
     }
@@ -43,12 +50,20 @@ public class PageResponse<T> {
         this.content = content;
     }
 
+    public int getPage() {
+        return pageNumber;
+    }
+
     public int getPageNumber() {
         return pageNumber;
     }
 
     public void setPageNumber(int pageNumber) {
         this.pageNumber = pageNumber;
+    }
+
+    public int getSize() {
+        return pageSize;
     }
 
     public int getPageSize() {
@@ -73,6 +88,14 @@ public class PageResponse<T> {
 
     public void setTotalPages(int totalPages) {
         this.totalPages = totalPages;
+    }
+
+    public boolean isFirst() {
+        return first;
+    }
+
+    public void setFirst(boolean first) {
+        this.first = first;
     }
 
     public boolean isLast() {

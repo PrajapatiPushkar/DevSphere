@@ -11,14 +11,15 @@ import com.devsphere.user.exception.ResourceNotFoundException;
 import com.devsphere.user.repository.GoalRepository;
 import com.devsphere.user.repository.TaskRepository;
 import com.devsphere.user.specification.TaskSpecification;
+import com.devsphere.user.util.PaginationUtils;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -29,7 +30,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class TaskService {
 
     private static final Logger log = LoggerFactory.getLogger(TaskService.class);
-    private static final int MAX_PAGE_SIZE = 100;
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
+            "createdAt", "updatedAt", "dueDate", "priority", "status", "title", "id"
+    );
 
     private final TaskRepository taskRepository;
     private final GoalRepository goalRepository;
@@ -77,11 +80,16 @@ public class TaskService {
 
     @Transactional(readOnly = true)
     public PageResponse<TaskResponse> listTasks(Long userId, TaskStatus status, TaskPriority priority, Long goalId, int page, int size) {
-        int validatedSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
-        int validatedPage = Math.max(page, 0);
+        return listTasks(userId, status, priority, goalId, page, size, "createdAt,desc");
+    }
 
-        Pageable pageable = PageRequest.of(validatedPage, validatedSize);
+    @Transactional(readOnly = true)
+    public PageResponse<TaskResponse> listTasks(Long userId, TaskStatus status, TaskPriority priority, Long goalId, int page, int size, String sort) {
+        if (userId == null) {
+            throw new IllegalArgumentException("User ID must not be null");
+        }
 
+        Pageable pageable = PaginationUtils.createPageable(page, size, sort, ALLOWED_SORT_FIELDS, "createdAt", Sort.Direction.DESC);
         Specification<Task> spec = TaskSpecification.filterTasks(userId, status, priority, goalId);
         Page<Task> taskPage = taskRepository.findAll(spec, pageable);
 

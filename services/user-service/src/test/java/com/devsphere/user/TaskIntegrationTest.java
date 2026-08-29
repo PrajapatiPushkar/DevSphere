@@ -139,7 +139,7 @@ class TaskIntegrationTest {
         PageResponse<TaskResponse> highPriority = taskService.listTasks(userId, null, TaskPriority.HIGH, null, 0, 20);
         assertThat(highPriority.getContent()).hasSize(2);
 
-        PageResponse<TaskResponse> todoTasks = taskService.listTasks(userId, TaskStatus.TODO, null, null, 0, 20);
+        PageResponse<TaskResponse> todoTasks = taskService.listTasks(userId, TaskStatus.TODO, null, null, 0, 20, "createdAt,asc");
         assertThat(todoTasks.getContent()).hasSize(3);
 
         assertThat(todoTasks.getContent().get(0).getId()).isEqualTo(t1.getId());

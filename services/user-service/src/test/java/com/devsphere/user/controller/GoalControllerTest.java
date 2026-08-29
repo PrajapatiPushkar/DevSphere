@@ -25,6 +25,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
@@ -93,7 +94,7 @@ class GoalControllerTest {
         GoalResponse response = new GoalResponse(1L, userId, "Goal 1", "Desc", GoalType.WEEKLY, GoalStatus.ACTIVE, 10, 2, null, null, Instant.now(), Instant.now());
         PageResponse<GoalResponse> pageResponse = new PageResponse<>(List.of(response), 0, 20, 1, 1, true);
 
-        when(goalService.getGoals(eq(userId), any(), any(), anyInt(), anyInt())).thenReturn(pageResponse);
+        when(goalService.getGoals(eq(userId), any(), any(), anyInt(), anyInt(), anyString())).thenReturn(pageResponse);
 
         mockMvc.perform(get("/api/v1/goals")
                         .header("X-Authenticated-User-Id", "100")

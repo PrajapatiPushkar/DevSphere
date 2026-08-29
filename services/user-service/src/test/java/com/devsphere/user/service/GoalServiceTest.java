@@ -21,6 +21,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -70,7 +71,7 @@ class GoalServiceTest {
         Goal goal1 = new Goal(userId, "Goal 1", GoalType.DAILY);
         goal1.setId(1L);
 
-        when(goalRepository.findAllByUserId(eq(userId), any(Pageable.class)))
+        when(goalRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(goal1)));
 
         PageResponse<GoalResponse> pageResponse = goalService.getGoals(userId, null, null, 0, 10);

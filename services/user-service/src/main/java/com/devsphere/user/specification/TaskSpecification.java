@@ -29,14 +29,6 @@ public class TaskSpecification {
                 predicates.add(criteriaBuilder.equal(root.get("goalId"), goalId));
             }
 
-            if (query != null) {
-                query.orderBy(
-                        criteriaBuilder.asc(criteriaBuilder.selectCase().when(criteriaBuilder.isNull(root.get("dueDate")), 1).otherwise(0)),
-                        criteriaBuilder.asc(root.get("dueDate")),
-                        criteriaBuilder.desc(root.get("createdAt"))
-                );
-            }
-
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
     }

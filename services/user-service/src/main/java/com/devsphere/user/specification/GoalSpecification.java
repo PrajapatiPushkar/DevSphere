@@ -1,16 +1,16 @@
 package com.devsphere.user.specification;
 
-import com.devsphere.user.entity.DeveloperProject;
-import com.devsphere.user.entity.ProjectStatus;
-import com.devsphere.user.entity.ProjectType;
+import com.devsphere.user.entity.Goal;
+import com.devsphere.user.entity.GoalStatus;
+import com.devsphere.user.entity.GoalType;
 import jakarta.persistence.criteria.Predicate;
 import java.util.ArrayList;
 import java.util.List;
 import org.springframework.data.jpa.domain.Specification;
 
-public class ProjectSpecification {
+public class GoalSpecification {
 
-    public static Specification<DeveloperProject> filterProjects(Long userId, ProjectStatus status, ProjectType projectType) {
+    public static Specification<Goal> filterGoals(Long userId, GoalStatus status, GoalType goalType) {
         return (root, query, criteriaBuilder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -18,12 +18,10 @@ public class ProjectSpecification {
 
             if (status != null) {
                 predicates.add(criteriaBuilder.equal(root.get("status"), status));
-            } else {
-                predicates.add(criteriaBuilder.notEqual(root.get("status"), ProjectStatus.ARCHIVED));
             }
 
-            if (projectType != null) {
-                predicates.add(criteriaBuilder.equal(root.get("projectType"), projectType));
+            if (goalType != null) {
+                predicates.add(criteriaBuilder.equal(root.get("goalType"), goalType));
             }
 
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));

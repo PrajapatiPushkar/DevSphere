@@ -10,16 +10,18 @@ import com.devsphere.user.entity.ProjectType;
 import com.devsphere.user.exception.ResourceNotFoundException;
 import com.devsphere.user.repository.DeveloperProjectRepository;
 import com.devsphere.user.specification.ProjectSpecification;
+import com.devsphere.user.util.PaginationUtils;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +30,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProjectService {
 
     private static final Logger log = LoggerFactory.getLogger(ProjectService.class);
-    private static final int MAX_PAGE_SIZE = 100;
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
+            "createdAt", "updatedAt", "name", "startDate", "targetEndDate", "status", "projectType", "id"
+    );
 
     private final DeveloperProjectRepository projectRepository;
     private final MeterRegistry meterRegistry;
@@ -83,14 +87,16 @@ public class ProjectService {
 
     @Transactional(readOnly = true)
     public PageResponse<ProjectResponse> listProjects(Long userId, ProjectStatus status, ProjectType projectType, int page, int size) {
+        return listProjects(userId, status, projectType, page, size, "createdAt,desc");
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<ProjectResponse> listProjects(Long userId, ProjectStatus status, ProjectType projectType, int page, int size, String sort) {
         if (userId == null) {
             throw new IllegalArgumentException("User ID must not be null");
         }
 
-        int pageSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
-        int pageNumber = Math.max(page, 0);
-
-        Pageable pageable = PageRequest.of(pageNumber, pageSize);
+        Pageable pageable = PaginationUtils.createPageable(page, size, sort, ALLOWED_SORT_FIELDS, "createdAt", Sort.Direction.DESC);
         Specification<DeveloperProject> spec = ProjectSpecification.filterProjects(userId, status, projectType);
         Page<DeveloperProject> projectPage = projectRepository.findAll(spec, pageable);
 

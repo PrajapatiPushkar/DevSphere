@@ -56,9 +56,10 @@ public class PlannerController {
             @RequestHeader(value = AUTH_USER_ID_HEADER, required = false) String authUserIdHeader,
             @RequestParam(value = "date", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
             @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "20") int size) {
+            @RequestParam(value = "size", defaultValue = "20") int size,
+            @RequestParam(value = "sort", required = false, defaultValue = "plannedDate,desc") String sort) {
         Long userId = extractAndValidateUserId(authUserIdHeader);
-        PageResponse<PlannerEntryResponse> response = plannerService.listPlannerEntries(userId, date, page, size);
+        PageResponse<PlannerEntryResponse> response = plannerService.listPlannerEntries(userId, date, page, size, sort);
         return ResponseEntity.ok(response);
     }
 

@@ -17,18 +17,20 @@ import com.devsphere.user.repository.DsaProblemRepository;
 import com.devsphere.user.repository.GoalRepository;
 import com.devsphere.user.repository.TaskRepository;
 import com.devsphere.user.specification.DsaProblemSpecification;
+import com.devsphere.user.util.PaginationUtils;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,7 +39,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class DsaProblemService {
 
     private static final Logger log = LoggerFactory.getLogger(DsaProblemService.class);
-    private static final int MAX_PAGE_SIZE = 100;
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
+            "createdAt", "updatedAt", "title", "difficulty", "topic", "platform", "status", "attemptCount", "id"
+    );
 
     private final DsaProblemRepository dsaProblemRepository;
     private final TaskRepository taskRepository;
@@ -102,11 +106,16 @@ public class DsaProblemService {
 
     @Transactional(readOnly = true)
     public PageResponse<DsaProblemResponse> listProblems(Long userId, DsaDifficulty difficulty, DsaTopic topic, DsaPlatform platform, DsaProblemStatus status, int page, int size) {
-        int validatedSize = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
-        int validatedPage = Math.max(page, 0);
+        return listProblems(userId, difficulty, topic, platform, status, page, size, "createdAt,desc");
+    }
 
-        Pageable pageable = PageRequest.of(validatedPage, validatedSize);
+    @Transactional(readOnly = true)
+    public PageResponse<DsaProblemResponse> listProblems(Long userId, DsaDifficulty difficulty, DsaTopic topic, DsaPlatform platform, DsaProblemStatus status, int page, int size, String sort) {
+        if (userId == null) {
+            throw new IllegalArgumentException("User ID must not be null");
+        }
 
+        Pageable pageable = PaginationUtils.createPageable(page, size, sort, ALLOWED_SORT_FIELDS, "createdAt", Sort.Direction.DESC);
         Specification<DsaProblem> spec = DsaProblemSpecification.filterProblems(userId, difficulty, topic, platform, status);
         Page<DsaProblem> problemPage = dsaProblemRepository.findAll(spec, pageable);
 

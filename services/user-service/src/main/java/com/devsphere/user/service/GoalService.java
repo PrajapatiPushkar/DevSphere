@@ -9,16 +9,19 @@ import com.devsphere.user.entity.GoalStatus;
 import com.devsphere.user.entity.GoalType;
 import com.devsphere.user.exception.ResourceNotFoundException;
 import com.devsphere.user.repository.GoalRepository;
+import com.devsphere.user.specification.GoalSpecification;
+import com.devsphere.user.util.PaginationUtils;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
+import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,7 +29,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class GoalService {
 
     private static final Logger log = LoggerFactory.getLogger(GoalService.class);
-    private static final int MAX_PAGE_SIZE = 100;
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
+            "createdAt", "updatedAt", "title", "targetDate", "status", "goalType", "id"
+    );
 
     private final GoalRepository goalRepository;
     private final MeterRegistry meterRegistry;
@@ -65,28 +70,18 @@ public class GoalService {
 
     @Transactional(readOnly = true)
     public PageResponse<GoalResponse> getGoals(Long userId, GoalStatus status, GoalType goalType, int page, int size) {
+        return getGoals(userId, status, goalType, page, size, "createdAt,desc");
+    }
+
+    @Transactional(readOnly = true)
+    public PageResponse<GoalResponse> getGoals(Long userId, GoalStatus status, GoalType goalType, int page, int size, String sort) {
         if (userId == null) {
             throw new IllegalArgumentException("User ID must not be null");
         }
-        if (size > MAX_PAGE_SIZE) {
-            throw new IllegalArgumentException("Page size must not exceed " + MAX_PAGE_SIZE);
-        }
 
-        int pageNum = Math.max(0, page);
-        int pageSize = Math.max(1, size);
-
-        Pageable pageable = PageRequest.of(pageNum, pageSize, Sort.by(Sort.Direction.DESC, "createdAt"));
-
-        Page<Goal> goalPage;
-        if (status != null && goalType != null) {
-            goalPage = goalRepository.findAllByUserIdAndStatusAndGoalType(userId, status, goalType, pageable);
-        } else if (status != null) {
-            goalPage = goalRepository.findAllByUserIdAndStatus(userId, status, pageable);
-        } else if (goalType != null) {
-            goalPage = goalRepository.findAllByUserIdAndGoalType(userId, goalType, pageable);
-        } else {
-            goalPage = goalRepository.findAllByUserId(userId, pageable);
-        }
+        Pageable pageable = PaginationUtils.createPageable(page, size, sort, ALLOWED_SORT_FIELDS, "createdAt", Sort.Direction.DESC);
+        Specification<Goal> spec = GoalSpecification.filterGoals(userId, status, goalType);
+        Page<Goal> goalPage = goalRepository.findAll(spec, pageable);
 
         Page<GoalResponse> responsePage = goalPage.map(GoalResponse::fromEntity);
         return PageResponse.fromPage(responsePage);

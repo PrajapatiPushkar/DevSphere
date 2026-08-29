@@ -53,9 +53,10 @@ public class ProjectController {
             @RequestParam(value = "status", required = false) ProjectStatus status,
             @RequestParam(value = "projectType", required = false) ProjectType projectType,
             @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "20") int size) {
+            @RequestParam(value = "size", defaultValue = "20") int size,
+            @RequestParam(value = "sort", required = false, defaultValue = "createdAt,desc") String sort) {
         Long userId = extractAndValidateUserId(authUserIdHeader);
-        PageResponse<ProjectResponse> response = projectService.listProjects(userId, status, projectType, page, size);
+        PageResponse<ProjectResponse> response = projectService.listProjects(userId, status, projectType, page, size, sort);
         return ResponseEntity.ok(response);
     }
 

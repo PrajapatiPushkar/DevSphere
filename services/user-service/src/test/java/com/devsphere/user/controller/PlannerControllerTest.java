@@ -31,6 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -160,7 +161,7 @@ class PlannerControllerTest {
         entry.setId(10L);
         PageResponse<PlannerEntryResponse> pageResponse = new PageResponse<>(List.of(new PlannerEntryResponse(entry)), 0, 20, 1, 1, true);
 
-        when(plannerService.listPlannerEntries(eq(userId), any(), anyInt(), anyInt())).thenReturn(pageResponse);
+        when(plannerService.listPlannerEntries(eq(userId), any(), anyInt(), anyInt(), anyString())).thenReturn(pageResponse);
 
         mockMvc.perform(get("/api/v1/planner/entries")
                         .header("X-Authenticated-User-Id", userId))

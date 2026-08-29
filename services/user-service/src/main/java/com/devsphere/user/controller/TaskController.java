@@ -54,9 +54,10 @@ public class TaskController {
             @RequestParam(value = "priority", required = false) TaskPriority priority,
             @RequestParam(value = "goalId", required = false) Long goalId,
             @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "20") int size) {
+            @RequestParam(value = "size", defaultValue = "20") int size,
+            @RequestParam(value = "sort", required = false, defaultValue = "createdAt,desc") String sort) {
         Long userId = extractAndValidateUserId(authUserIdHeader);
-        PageResponse<TaskResponse> response = taskService.listTasks(userId, status, priority, goalId, page, size);
+        PageResponse<TaskResponse> response = taskService.listTasks(userId, status, priority, goalId, page, size, sort);
         return ResponseEntity.ok(response);
     }
 

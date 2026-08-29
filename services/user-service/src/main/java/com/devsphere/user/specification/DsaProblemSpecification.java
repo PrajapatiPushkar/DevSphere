@@ -36,10 +36,6 @@ public class DsaProblemSpecification {
                 predicates.add(criteriaBuilder.equal(root.get("platform"), platform));
             }
 
-            if (query != null) {
-                query.orderBy(criteriaBuilder.desc(root.get("createdAt")));
-            }
-
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
     }

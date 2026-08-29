@@ -11,6 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -18,7 +19,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "developer_projects")
+@Table(
+    name = "developer_projects",
+    indexes = {
+        @Index(name = "idx_projects_user_status", columnList = "user_id, status"),
+        @Index(name = "idx_projects_user_created", columnList = "user_id, created_at")
+    }
+)
 public class DeveloperProject {
 
     @Id

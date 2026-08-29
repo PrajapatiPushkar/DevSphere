@@ -9,11 +9,18 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import java.time.Instant;
 
 @Entity
-@Table(name = "dsa_problems")
+@Table(
+    name = "dsa_problems",
+    indexes = {
+        @Index(name = "idx_dsa_user_status", columnList = "user_id, status"),
+        @Index(name = "idx_dsa_user_created", columnList = "user_id, created_at")
+    }
+)
 public class DsaProblem {
 
     @Id

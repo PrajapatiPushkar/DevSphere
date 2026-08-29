@@ -24,6 +24,9 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -97,7 +100,7 @@ class TaskControllerTest {
 
         PageResponse<TaskResponse> pageResponse = new PageResponse<>(List.of(new TaskResponse(task)), 0, 20, 1, 1, true);
 
-        when(taskService.listTasks(eq(userId), any(), any(), any(), anyInt(), anyInt())).thenReturn(pageResponse);
+        when(taskService.listTasks(eq(userId), any(), any(), any(), anyInt(), anyInt(), anyString())).thenReturn(pageResponse);
 
         mockMvc.perform(get("/api/v1/tasks")
                         .header("X-Authenticated-User-Id", userId))

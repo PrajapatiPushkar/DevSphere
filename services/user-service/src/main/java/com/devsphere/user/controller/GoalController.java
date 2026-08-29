@@ -52,9 +52,10 @@ public class GoalController {
             @RequestParam(value = "status", required = false) GoalStatus status,
             @RequestParam(value = "goalType", required = false) GoalType goalType,
             @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "20") int size) {
+            @RequestParam(value = "size", defaultValue = "20") int size,
+            @RequestParam(value = "sort", required = false, defaultValue = "createdAt,desc") String sort) {
         Long userId = extractAndValidateUserId(authUserIdHeader);
-        PageResponse<GoalResponse> response = goalService.getGoals(userId, status, goalType, page, size);
+        PageResponse<GoalResponse> response = goalService.getGoals(userId, status, goalType, page, size, sort);
         return ResponseEntity.ok(response);
     }
 

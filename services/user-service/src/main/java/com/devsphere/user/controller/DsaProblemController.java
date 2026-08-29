@@ -61,9 +61,10 @@ public class DsaProblemController {
             @RequestParam(value = "platform", required = false) DsaPlatform platform,
             @RequestParam(value = "status", required = false) DsaProblemStatus status,
             @RequestParam(value = "page", defaultValue = "0") int page,
-            @RequestParam(value = "size", defaultValue = "20") int size) {
+            @RequestParam(value = "size", defaultValue = "20") int size,
+            @RequestParam(value = "sort", required = false, defaultValue = "createdAt,desc") String sort) {
         Long userId = extractAndValidateUserId(authUserIdHeader);
-        PageResponse<DsaProblemResponse> response = dsaProblemService.listProblems(userId, difficulty, topic, platform, status, page, size);
+        PageResponse<DsaProblemResponse> response = dsaProblemService.listProblems(userId, difficulty, topic, platform, status, page, size, sort);
         return ResponseEntity.ok(response);
     }
 
