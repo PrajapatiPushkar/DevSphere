@@ -27,8 +27,9 @@ Kafka Topic (devsphere.user.v1) ──► Consumer ──[Idempotency & Retries]
   - `GET /api/v1/resumes/{id}/render/docx`: Returns `application/vnd.openxmlformats-officedocument.wordprocessingml.document` with `Content-Disposition: attachment; filename="<sanitized>.docx"`.
   - `POST /api/v1/resumes/{id}/versions`: Create an immutable point-in-time version snapshot.
   - `GET /api/v1/resumes/{id}/versions`: List versions for a resume profile (ordered by versionNumber DESC).
+  - `GET /api/v1/resumes/{id}/versions/published`: Fetch currently active published version snapshot.
   - `GET /api/v1/resumes/{id}/versions/{versionId}`: Fetch specific version details and snapshot.
-  - `POST /api/v1/resumes/{id}/versions/{versionId}/publish`: Transition version to `PUBLISHED`.
+  - `POST /api/v1/resumes/{id}/versions/{versionId}/publish`: Transition version to `PUBLISHED` (automatically archiving previous published version; single-published-version invariant guaranteed via `V12__add_published_version_constraint.sql`).
   - `POST /api/v1/resumes/{id}/versions/{versionId}/archive`: Transition version to `ARCHIVED`.
   - `GET /api/v1/resumes/{id}/versions/{versionId}/render/html`: Render published/draft version snapshot as HTML.
   - `GET /api/v1/resumes/{id}/versions/{versionId}/render/pdf`: Render published/draft version snapshot as PDF.

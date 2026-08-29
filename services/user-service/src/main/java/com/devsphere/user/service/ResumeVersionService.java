@@ -24,6 +24,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -135,33 +136,53 @@ public class ResumeVersionService {
 
     @Transactional
     public ResumeVersionResponse publishVersion(Long resumeId, Long versionId, Long userId) {
-        verifyResumeOwnership(resumeId, userId);
+        resumeProfileRepository.findByIdAndUserIdForUpdate(resumeId, userId)
+                .orElseThrow(() -> new ResourceNotFoundException("RESUME_NOT_FOUND", "Resume profile not found"));
 
         ResumeVersion version = resumeVersionRepository.findByIdAndResumeProfileIdAndUserId(versionId, resumeId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("RESUME_VERSION_NOT_FOUND", "Resume version not found"));
 
-        if (version.getStatus() == ResumeVersionStatus.PUBLISHED) {
-            CompiledResumeResponse snapshot = deserializeSnapshot(version.getSnapshotData());
-            return new ResumeVersionResponse(version, snapshot);
-        }
-
-        if (version.getStatus() == ResumeVersionStatus.ARCHIVED) {
-            throw new IllegalArgumentException("Cannot publish an archived version");
-        }
-
         if (version.getStatus() != ResumeVersionStatus.DRAFT) {
-            throw new IllegalArgumentException("Invalid state transition to PUBLISHED from status: " + version.getStatus());
+            meterRegistry.counter("devsphere_resume_version_publish_total", "status", "failure", "transition", "publish").increment();
+            throw new IllegalArgumentException("Only DRAFT versions can be published. Current version status: " + version.getStatus());
+        }
+
+        Optional<ResumeVersion> currentPublishedOpt = resumeVersionRepository.findByResumeProfileIdAndStatus(resumeId, ResumeVersionStatus.PUBLISHED);
+        if (currentPublishedOpt.isPresent()) {
+            ResumeVersion currentPublished = currentPublishedOpt.get();
+            if (!currentPublished.getId().equals(versionId)) {
+                currentPublished.setStatus(ResumeVersionStatus.ARCHIVED);
+                currentPublished.setArchivedAt(Instant.now());
+                resumeVersionRepository.save(currentPublished);
+                resumeVersionRepository.flush();
+                log.info("Archived previously published resume version ID: {} for resumeId: {}", currentPublished.getId(), resumeId);
+            }
         }
 
         version.setStatus(ResumeVersionStatus.PUBLISHED);
         version.setPublishedAt(Instant.now());
 
         ResumeVersion saved = resumeVersionRepository.save(version);
+        resumeVersionRepository.flush();
+
+        meterRegistry.counter("devsphere_resume_version_publish_total", "status", "success", "transition", "publish").increment();
         meterRegistry.counter("devsphere_resume_versions_published_total", "status", "success").increment();
-        log.info("Published resume version ID: {} for resumeId: {} and userId: {}", versionId, resumeId, userId);
+        log.info("Published resume version ID: {} (versionNumber: {}) for resumeId: {} and userId: {}",
+                saved.getId(), saved.getVersionNumber(), resumeId, userId);
 
         CompiledResumeResponse snapshot = deserializeSnapshot(saved.getSnapshotData());
         return new ResumeVersionResponse(saved, snapshot);
+    }
+
+    @Transactional(readOnly = true)
+    public ResumeVersionResponse getPublishedVersion(Long resumeId, Long userId) {
+        verifyResumeOwnership(resumeId, userId);
+
+        ResumeVersion publishedVersion = resumeVersionRepository.findByResumeProfileIdAndUserIdAndStatus(resumeId, userId, ResumeVersionStatus.PUBLISHED)
+                .orElseThrow(() -> new ResourceNotFoundException("PUBLISHED_VERSION_NOT_FOUND", "No published resume version found for this resume profile"));
+
+        CompiledResumeResponse snapshot = deserializeSnapshot(publishedVersion.getSnapshotData());
+        return new ResumeVersionResponse(publishedVersion, snapshot);
     }
 
     @Transactional

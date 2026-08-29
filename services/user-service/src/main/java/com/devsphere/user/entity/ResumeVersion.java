@@ -51,6 +51,9 @@ public class ResumeVersion {
     @Column(name = "archived_at")
     private Instant archivedAt;
 
+    @Column(name = "published_profile_id", insertable = false, updatable = false)
+    private Long publishedProfileId;
+
     public ResumeVersion() {
     }
 

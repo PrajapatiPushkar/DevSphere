@@ -228,4 +228,88 @@ class ResumeVersionIntegrationTest {
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("Resume profile not found");
     }
+
+    @Test
+    @DisplayName("PUBLISHED MANAGEMENT TEST: Publishing a new version archives the previously published version")
+    void publishNewVersion_ArchivesPreviouslyPublishedVersion() {
+        Long userId = 2005L;
+
+        ResumeProfileResponse profile = resumeProfileService.createResumeProfile(userId, new ResumeProfileRequest(
+                "Versioned Resume", "Senior Developer", "Summary", ResumeTemplate.PROFESSIONAL
+        ));
+
+        // Create V1 and Publish
+        ResumeVersionResponse v1 = resumeVersionService.createVersion(profile.getId(), userId, new CreateResumeVersionRequest("V1"));
+        resumeVersionService.publishVersion(profile.getId(), v1.getId(), userId);
+
+        ResumeVersionResponse published1 = resumeVersionService.getPublishedVersion(profile.getId(), userId);
+        assertThat(published1.getId()).isEqualTo(v1.getId());
+        assertThat(published1.getStatus()).isEqualTo(ResumeVersionStatus.PUBLISHED);
+
+        // Create V2 and Publish
+        ResumeVersionResponse v2 = resumeVersionService.createVersion(profile.getId(), userId, new CreateResumeVersionRequest("V2"));
+        resumeVersionService.publishVersion(profile.getId(), v2.getId(), userId);
+
+        // Get Published - should now be V2
+        ResumeVersionResponse published2 = resumeVersionService.getPublishedVersion(profile.getId(), userId);
+        assertThat(published2.getId()).isEqualTo(v2.getId());
+        assertThat(published2.getStatus()).isEqualTo(ResumeVersionStatus.PUBLISHED);
+
+        // V1 should now be ARCHIVED
+        ResumeVersionResponse v1Fetch = resumeVersionService.getVersion(profile.getId(), v1.getId(), userId);
+        assertThat(v1Fetch.getStatus()).isEqualTo(ResumeVersionStatus.ARCHIVED);
+        assertThat(v1Fetch.getArchivedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("CONCURRENCY TEST: Simultaneous publish requests result in exactly ONE published version")
+    void concurrentPublishing_GuaranteesSinglePublishedVersion() throws Exception {
+        Long userId = 2006L;
+
+        ResumeProfileResponse profile = resumeProfileService.createResumeProfile(userId, new ResumeProfileRequest(
+                "Concurrent Test Resume", "Engineer", "Summary", ResumeTemplate.PROFESSIONAL
+        ));
+
+        ResumeVersionResponse v1 = resumeVersionService.createVersion(profile.getId(), userId, new CreateResumeVersionRequest("Version 1"));
+        ResumeVersionResponse v2 = resumeVersionService.createVersion(profile.getId(), userId, new CreateResumeVersionRequest("Version 2"));
+
+        java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newFixedThreadPool(2);
+        java.util.concurrent.CountDownLatch startLatch = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch doneLatch = new java.util.concurrent.CountDownLatch(2);
+
+        executor.submit(() -> {
+            try {
+                startLatch.await();
+                resumeVersionService.publishVersion(profile.getId(), v1.getId(), userId);
+            } catch (Exception e) {
+                // Log or handle conflict
+            } finally {
+                doneLatch.countDown();
+            }
+        });
+
+        executor.submit(() -> {
+            try {
+                startLatch.await();
+                resumeVersionService.publishVersion(profile.getId(), v2.getId(), userId);
+            } catch (Exception e) {
+                // Log or handle conflict
+            } finally {
+                doneLatch.countDown();
+            }
+        });
+
+        startLatch.countDown(); // Start both threads simultaneously
+        boolean completed = doneLatch.await(10, java.util.concurrent.TimeUnit.SECONDS);
+        executor.shutdown();
+
+        assertThat(completed).isTrue();
+
+        List<com.devsphere.user.entity.ResumeVersion> versions = resumeVersionRepository.findAllByResumeProfileIdAndUserIdOrderByVersionNumberDesc(profile.getId(), userId);
+        long publishedCount = versions.stream().filter(v -> v.getStatus() == ResumeVersionStatus.PUBLISHED).count();
+        long archivedCount = versions.stream().filter(v -> v.getStatus() == ResumeVersionStatus.ARCHIVED).count();
+
+        assertThat(publishedCount).isEqualTo(1L);
+        assertThat(archivedCount).isEqualTo(1L);
+    }
 }

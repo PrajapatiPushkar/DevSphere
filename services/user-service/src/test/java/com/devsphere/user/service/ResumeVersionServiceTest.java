@@ -119,20 +119,43 @@ class ResumeVersionServiceTest {
     }
 
     @Test
-    @DisplayName("Publish version transitions DRAFT to PUBLISHED and sets publishedAt")
-    void publishVersion_Success() throws Exception {
+    @DisplayName("Publish version transitions DRAFT to PUBLISHED and archives previously published version")
+    void publishVersion_Success_ArchivesPreviousPublishedVersion() throws Exception {
         String json = objectMapper.writeValueAsString(testCompiledResponse);
-        ResumeVersion draft = new ResumeVersion(1L, 100L, 1, "V1", json);
+        ResumeVersion prevPublished = new ResumeVersion(1L, 100L, 1, "V1", json);
+        prevPublished.setId(4L);
+        prevPublished.setStatus(ResumeVersionStatus.PUBLISHED);
+
+        ResumeVersion draft = new ResumeVersion(1L, 100L, 2, "V2", json);
         draft.setId(5L);
 
-        when(resumeProfileRepository.findByIdAndUserId(1L, 100L)).thenReturn(Optional.of(testProfile));
+        when(resumeProfileRepository.findByIdAndUserIdForUpdate(1L, 100L)).thenReturn(Optional.of(testProfile));
         when(resumeVersionRepository.findByIdAndResumeProfileIdAndUserId(5L, 1L, 100L)).thenReturn(Optional.of(draft));
+        when(resumeVersionRepository.findByResumeProfileIdAndStatus(1L, ResumeVersionStatus.PUBLISHED)).thenReturn(Optional.of(prevPublished));
         when(resumeVersionRepository.save(any(ResumeVersion.class))).thenAnswer(inv -> inv.getArgument(0));
 
         ResumeVersionResponse response = service.publishVersion(1L, 5L, 100L);
 
         assertThat(response.getStatus()).isEqualTo(ResumeVersionStatus.PUBLISHED);
         assertThat(response.getPublishedAt()).isNotNull();
+        assertThat(prevPublished.getStatus()).isEqualTo(ResumeVersionStatus.ARCHIVED);
+        assertThat(prevPublished.getArchivedAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("Publishing an already published version throws IllegalArgumentException")
+    void publishVersion_FromPublished_ThrowsException() throws Exception {
+        String json = objectMapper.writeValueAsString(testCompiledResponse);
+        ResumeVersion published = new ResumeVersion(1L, 100L, 1, "V1", json);
+        published.setId(5L);
+        published.setStatus(ResumeVersionStatus.PUBLISHED);
+
+        when(resumeProfileRepository.findByIdAndUserIdForUpdate(1L, 100L)).thenReturn(Optional.of(testProfile));
+        when(resumeVersionRepository.findByIdAndResumeProfileIdAndUserId(5L, 1L, 100L)).thenReturn(Optional.of(published));
+
+        assertThatThrownBy(() -> service.publishVersion(1L, 5L, 100L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Only DRAFT versions can be published");
     }
 
     @Test
@@ -143,12 +166,43 @@ class ResumeVersionServiceTest {
         archived.setId(5L);
         archived.setStatus(ResumeVersionStatus.ARCHIVED);
 
-        when(resumeProfileRepository.findByIdAndUserId(1L, 100L)).thenReturn(Optional.of(testProfile));
+        when(resumeProfileRepository.findByIdAndUserIdForUpdate(1L, 100L)).thenReturn(Optional.of(testProfile));
         when(resumeVersionRepository.findByIdAndResumeProfileIdAndUserId(5L, 1L, 100L)).thenReturn(Optional.of(archived));
 
         assertThatThrownBy(() -> service.publishVersion(1L, 5L, 100L))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("Cannot publish an archived version");
+                .hasMessageContaining("Only DRAFT versions can be published");
+    }
+
+    @Test
+    @DisplayName("Get published version returns current published version")
+    void getPublishedVersion_Success() throws Exception {
+        String json = objectMapper.writeValueAsString(testCompiledResponse);
+        ResumeVersion published = new ResumeVersion(1L, 100L, 2, "V2 Published", json);
+        published.setId(10L);
+        published.setStatus(ResumeVersionStatus.PUBLISHED);
+
+        when(resumeProfileRepository.findByIdAndUserId(1L, 100L)).thenReturn(Optional.of(testProfile));
+        when(resumeVersionRepository.findByResumeProfileIdAndUserIdAndStatus(1L, 100L, ResumeVersionStatus.PUBLISHED))
+                .thenReturn(Optional.of(published));
+
+        ResumeVersionResponse response = service.getPublishedVersion(1L, 100L);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getId()).isEqualTo(10L);
+        assertThat(response.getStatus()).isEqualTo(ResumeVersionStatus.PUBLISHED);
+    }
+
+    @Test
+    @DisplayName("Get published version throws ResourceNotFoundException when no published version exists")
+    void getPublishedVersion_NotFound_ThrowsResourceNotFoundException() {
+        when(resumeProfileRepository.findByIdAndUserId(1L, 100L)).thenReturn(Optional.of(testProfile));
+        when(resumeVersionRepository.findByResumeProfileIdAndUserIdAndStatus(1L, 100L, ResumeVersionStatus.PUBLISHED))
+                .thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.getPublishedVersion(1L, 100L))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("No published resume version found");
     }
 
     @Test

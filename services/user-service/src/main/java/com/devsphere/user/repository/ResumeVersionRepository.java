@@ -21,4 +21,8 @@ public interface ResumeVersionRepository extends JpaRepository<ResumeVersion, Lo
 
     @Query("SELECT MAX(v.versionNumber) FROM ResumeVersion v WHERE v.resumeProfileId = :resumeProfileId")
     Optional<Integer> findMaxVersionNumberByResumeProfileId(@Param("resumeProfileId") Long resumeProfileId);
+
+    Optional<ResumeVersion> findByResumeProfileIdAndStatus(Long resumeProfileId, com.devsphere.user.entity.ResumeVersionStatus status);
+
+    Optional<ResumeVersion> findByResumeProfileIdAndUserIdAndStatus(Long resumeProfileId, Long userId, com.devsphere.user.entity.ResumeVersionStatus status);
 }

@@ -61,6 +61,15 @@ public class ResumeVersionController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/published")
+    public ResponseEntity<ResumeVersionResponse> getPublishedVersion(
+            @RequestHeader(value = AUTH_USER_ID_HEADER, required = false) String authUserIdHeader,
+            @PathVariable Long resumeId) {
+        Long userId = extractAndValidateUserId(authUserIdHeader);
+        ResumeVersionResponse response = resumeVersionService.getPublishedVersion(resumeId, userId);
+        return ResponseEntity.ok(response);
+    }
+
     @PostMapping("/{versionId}/publish")
     public ResponseEntity<ResumeVersionResponse> publishVersion(
             @RequestHeader(value = AUTH_USER_ID_HEADER, required = false) String authUserIdHeader,

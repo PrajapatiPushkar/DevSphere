@@ -109,6 +109,27 @@ class ResumeVersionControllerTest {
     }
 
     @Test
+    @DisplayName("GET published version returns 200 OK")
+    void getPublishedVersion_Returns200OK() throws Exception {
+        Long userId = 100L;
+        Long resumeId = 1L;
+        Long versionId = 10L;
+
+        ResumeVersion v = new ResumeVersion(resumeId, userId, 2, "V2 Published", "{}");
+        v.setId(versionId);
+        v.setStatus(ResumeVersionStatus.PUBLISHED);
+
+        when(resumeVersionService.getPublishedVersion(resumeId, userId))
+                .thenReturn(new ResumeVersionResponse(v));
+
+        mockMvc.perform(get("/api/v1/resumes/{resumeId}/versions/published", resumeId)
+                        .header("X-Authenticated-User-Id", userId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(versionId))
+                .andExpect(jsonPath("$.status").value("PUBLISHED"));
+    }
+
+    @Test
     @DisplayName("POST publish version returns 200 OK with PUBLISHED status")
     void publishVersion_Returns200OK() throws Exception {
         Long userId = 100L;
