@@ -16,6 +16,11 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -198,6 +203,51 @@ public class GlobalExceptionHandler {
                 HttpStatus.CONFLICT.name(),
                 ex.getCode() != null ? ex.getCode() : "DUPLICATE_RESUME_SELECTION",
                 ex.getMessage(),
+                getPath(request),
+                null,
+                getTraceId()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler({OptimisticLockingFailureException.class, ObjectOptimisticLockingFailureException.class})
+    public ResponseEntity<ErrorResponse> handleOptimisticLockingFailure(Exception ex, HttpServletRequest request) {
+        log.warn("Optimistic locking failure for path {}: {}", getPath(request), ex.getMessage());
+        ErrorResponse response = new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                HttpStatus.CONFLICT.name(),
+                "RESOURCE_VERSION_CONFLICT",
+                "The resource was modified by another request",
+                getPath(request),
+                null,
+                getTraceId()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex, HttpServletRequest request) {
+        log.warn("Database constraint violation for path {}: {}", getPath(request), ex.getMessage());
+        ErrorResponse response = new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                HttpStatus.CONFLICT.name(),
+                "DATABASE_CONSTRAINT_VIOLATION",
+                "Database constraint violation occurred",
+                getPath(request),
+                null,
+                getTraceId()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler({PessimisticLockingFailureException.class, CannotAcquireLockException.class})
+    public ResponseEntity<ErrorResponse> handlePessimisticLockingFailure(Exception ex, HttpServletRequest request) {
+        log.warn("Pessimistic lock acquisition failure for path {}: {}", getPath(request), ex.getMessage());
+        ErrorResponse response = new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                HttpStatus.CONFLICT.name(),
+                "LOCK_ACQUISITION_TIMEOUT",
+                "Could not acquire database lock within timeout",
                 getPath(request),
                 null,
                 getTraceId()

@@ -7,6 +7,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -29,6 +30,21 @@ public class GlobalExceptionHandler {
                 HttpStatus.CONFLICT.name(),
                 "EMAIL_ALREADY_EXISTS",
                 ex.getMessage(),
+                getPath(request),
+                null,
+                getTraceId()
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException ex, HttpServletRequest request) {
+        log.warn("Database constraint violation for path {}: {}", getPath(request), ex.getMessage());
+        ErrorResponse response = new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                HttpStatus.CONFLICT.name(),
+                "DATABASE_CONSTRAINT_VIOLATION",
+                "Database constraint violation occurred",
                 getPath(request),
                 null,
                 getTraceId()
