@@ -7,6 +7,7 @@ import com.devsphere.user.renderer.DocxResumeRenderer;
 import com.devsphere.user.renderer.PdfResumeRenderer;
 import com.devsphere.user.renderer.ResumeRenderer;
 import com.devsphere.user.util.ResumeFilenameSanitizer;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -72,6 +73,7 @@ public class ResumeExportService {
         this.maxSizeBytes = maxSizeBytes > 0 ? maxSizeBytes : DEFAULT_MAX_SIZE_BYTES;
     }
 
+    @Bulkhead(name = "resumeExportBulkhead")
     public ResumeExportResult exportResume(Long resumeId, Long userId, ResumeExportFormat format) {
         ResumeExportFormat actualFormat = format != null ? format : ResumeExportFormat.PDF;
         CompiledResumeResponse compiled;
@@ -88,6 +90,7 @@ public class ResumeExportService {
         return doExport(compiled, actualFormat, "resumeId: " + resumeId + " for userId: " + userId);
     }
 
+    @Bulkhead(name = "resumeExportBulkhead")
     public ResumeExportResult exportResumeVersion(Long resumeId, Long versionId, Long userId, ResumeExportFormat format) {
         if (resumeVersionService == null) {
             throw new IllegalStateException("ResumeVersionService is not configured");

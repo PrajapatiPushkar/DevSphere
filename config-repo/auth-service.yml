@@ -51,12 +51,54 @@ management:
       deployment.environment: ${SPRING_PROFILES_ACTIVE:development}
 
 resilience4j:
-  bulkhead:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        slowCallRateThreshold: 50
+        slowCallDurationThreshold: 2000ms
+        waitDurationInOpenState: 5000ms
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        ignoreExceptions:
+          - com.devsphere.auth.exception.InvalidCredentialsException
+          - com.devsphere.auth.exception.EmailAlreadyExistsException
+          - java.lang.IllegalArgumentException
     instances:
-      authBulkhead:
+      authCircuitBreaker:
+        baseConfig: default
+  retry:
+    configs:
+      default:
+        maxAttempts: 3
+        waitDuration: 500ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+        retryExceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+        ignoreExceptions:
+          - com.devsphere.auth.exception.InvalidCredentialsException
+          - com.devsphere.auth.exception.EmailAlreadyExistsException
+          - java.lang.IllegalArgumentException
+    instances:
+      authRetry:
+        baseConfig: default
+  bulkhead:
+    configs:
+      default:
         maxConcurrentCalls: 10
         maxWaitDuration: 100ms
+    instances:
+      authBulkhead:
+        baseConfig: default
   timelimiter:
+    configs:
+      default:
+        timeoutDuration: 3s
     instances:
       authTimeLimiter:
-        timeoutDuration: 3s
+        baseConfig: default

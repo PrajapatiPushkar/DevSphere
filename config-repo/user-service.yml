@@ -72,12 +72,64 @@ management:
       deployment.environment: ${SPRING_PROFILES_ACTIVE:development}
 
 resilience4j:
-  bulkhead:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        slowCallRateThreshold: 50
+        slowCallDurationThreshold: 2000ms
+        waitDurationInOpenState: 5000ms
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        ignoreExceptions:
+          - com.devsphere.user.exception.ResourceNotFoundException
+          - com.devsphere.user.exception.UnauthorizedException
+          - com.devsphere.user.exception.ForbiddenException
+          - java.lang.IllegalArgumentException
     instances:
-      userProfileBulkhead:
+      userServiceCircuitBreaker:
+        baseConfig: default
+      resumeExportCircuitBreaker:
+        baseConfig: default
+  retry:
+    configs:
+      default:
+        maxAttempts: 3
+        waitDuration: 500ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+        retryExceptions:
+          - java.io.IOException
+          - java.util.concurrent.TimeoutException
+        ignoreExceptions:
+          - com.devsphere.user.exception.ResourceNotFoundException
+          - com.devsphere.user.exception.UnauthorizedException
+          - com.devsphere.user.exception.ForbiddenException
+          - java.lang.IllegalArgumentException
+    instances:
+      userServiceRetry:
+        baseConfig: default
+      resumeExportRetry:
+        baseConfig: default
+  bulkhead:
+    configs:
+      default:
         maxConcurrentCalls: 10
         maxWaitDuration: 100ms
+    instances:
+      userProfileBulkhead:
+        baseConfig: default
+      resumeExportBulkhead:
+        baseConfig: default
   timelimiter:
+    configs:
+      default:
+        timeoutDuration: 3s
     instances:
       userProfileTimeLimiter:
-        timeoutDuration: 3s
+        baseConfig: default
+      resumeExportTimeLimiter:
+        baseConfig: default

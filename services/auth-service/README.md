@@ -6,8 +6,8 @@ The Auth Service is the dedicated microservice responsible for managing user ide
 ---
 
 ## Current Status
-> **Production Resilience & Fault Tolerance (Lesson 16)**  
-> The Auth Service assigns server-controlled roles (`USER`, `ADMIN`), prevents non-idempotent write operation retry storms on registration, enforces BCrypt credential verification without retrying invalid login attempts, integrates Resilience4j configuration via Config Server, exposes Prometheus metrics (`/actuator/prometheus`), registers with Eureka (`DEVSPHERE-AUTH-SERVICE`), and publishes transactional outbox events reliably.
+> **API Reliability & Resilience Foundation (Lesson 51)**  
+> The Auth Service features comprehensive Resilience4j protection externalized via Config Server (`authCircuitBreaker`, `authRetry`, `authBulkhead`, `authTimeLimiter`). Retries are restricted to transient IO/network exceptions (`IOException`, `TimeoutException`), while credentials and business errors (`InvalidCredentialsException`, `EmailAlreadyExistsException`) fail fast without retrying. Global exception handlers map `BulkheadFullException` (503 `BULKHEAD_LIMIT_EXCEEDED`), `CallNotPermittedException` (503 `DOWNSTREAM_SERVICE_UNAVAILABLE`), `RequestNotPermitted` (429 `RATE_LIMIT_EXCEEDED`), and `TimeoutException` (504 `DOWNSTREAM_TIMEOUT`), preserving strict security and zero credential leakage.
 
 ---
 

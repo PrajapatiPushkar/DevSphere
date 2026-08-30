@@ -2,7 +2,7 @@
 
 ## Overview
 
-The **User Service** is the core application domain microservice responsible for managing authenticated user profile information in DevSphere. It operates on port `8082`, enforces independent Spring Security JWT validation, role authorization (`ROLE_USER`, `ROLE_ADMIN`), resource ownership checks (`authenticatedUserId == targetUserId OR ROLE_ADMIN`), exposes Prometheus metrics (`/actuator/prometheus`), consumes centralized configuration from Spring Cloud Config Server (`http://localhost:8888`), and maintains strict database ownership over `devsphere_user` with Redis distributed caching and Kafka consumer reliability.
+The **User Service** is the core application domain microservice responsible for managing authenticated user profile information in DevSphere. It operates on port `8082`, enforces independent Spring Security JWT validation, role authorization (`ROLE_USER`, `ROLE_ADMIN`), resource ownership checks (`authenticatedUserId == targetUserId OR ROLE_ADMIN`), exposes Prometheus metrics (`/actuator/prometheus`), consumes centralized configuration from Spring Cloud Config Server (`http://localhost:8888`), and maintains strict database ownership over `devsphere_user` with Redis distributed caching, Kafka consumer reliability, and comprehensive Resilience4j circuit breakers, retries, bulkheads, and time limiters.
 
 ```
 Client ──► API Gateway (:8080) ──[Gateway Security]──► User Service (:8082) ──┬──► Redis Cache (:6379)

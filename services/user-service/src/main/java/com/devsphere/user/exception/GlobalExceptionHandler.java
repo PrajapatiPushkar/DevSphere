@@ -332,6 +332,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
     }
 
+    @ExceptionHandler(io.github.resilience4j.ratelimiter.RequestNotPermitted.class)
+    public ResponseEntity<ErrorResponse> handleRequestNotPermitted(io.github.resilience4j.ratelimiter.RequestNotPermitted ex, HttpServletRequest request) {
+        log.warn("Rate limit exceeded for path {}: {}", getPath(request), ex.getMessage());
+        ErrorResponse response = new ErrorResponse(
+                HttpStatus.TOO_MANY_REQUESTS.value(),
+                HttpStatus.TOO_MANY_REQUESTS.name(),
+                "RATE_LIMIT_EXCEEDED",
+                "Rate limit exceeded. Please try again later.",
+                getPath(request),
+                null,
+                getTraceId()
+        );
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(response);
+    }
+
     @ExceptionHandler(java.util.concurrent.TimeoutException.class)
     public ResponseEntity<ErrorResponse> handleTimeout(Exception ex, HttpServletRequest request) {
         log.warn("Request timed out for path {}: {}", getPath(request), ex.getMessage());
