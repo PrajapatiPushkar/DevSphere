@@ -13,6 +13,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
@@ -74,6 +77,22 @@ class PublicResumeIntegrationTest {
         assertThat(publicResp.getBody().getTargetRole()).isEqualTo("DevOps Specialist");
         assertThat(publicResp.getBody().getTemplate()).isEqualTo(ResumeTemplate.MODERN);
 
+        // Verify Lesson 50 enriched metadata fields
+        assertThat(publicResp.getBody().getTitle()).isEqualTo("Cloud Engineer — DevOps Specialist");
+        assertThat(publicResp.getBody().getDescription()).isNotNull();
+        assertThat(publicResp.getBody().getPublicResumeId()).isEqualTo(profile.getPublicId());
+        assertThat(publicResp.getBody().getPublishedVersion()).isEqualTo(1);
+        assertThat(publicResp.getHeaders().getETag()).isNotNull();
+
+        String etag = publicResp.getHeaders().getETag();
+
+        // Verify ETag conditional request (If-None-Match -> 304 Not Modified)
+        HttpHeaders headers = new HttpHeaders();
+        headers.set(HttpHeaders.IF_NONE_MATCH, etag);
+        HttpEntity<Void> conditionalRequest = new HttpEntity<>(headers);
+        ResponseEntity<String> conditionalResp = restTemplate.exchange("/api/v1/public/resumes/" + profile.getPublicId(), HttpMethod.GET, conditionalRequest, String.class);
+        assertThat(conditionalResp.getStatusCode()).isEqualTo(HttpStatus.NOT_MODIFIED);
+
         // 7. Mutate live profile data (e.g. change name to "Architect")
         profile = resumeProfileRepository.findById(profile.getId()).orElseThrow();
         profile.setName("Architect");
@@ -92,6 +111,11 @@ class PublicResumeIntegrationTest {
         ResponseEntity<PublicResumeResponse> updatedPublicResp = restTemplate.getForEntity("/api/v1/public/resumes/" + profile.getPublicId(), PublicResumeResponse.class);
         assertThat(updatedPublicResp.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(updatedPublicResp.getBody().getName()).isEqualTo("Architect");
+        assertThat(updatedPublicResp.getBody().getTitle()).isEqualTo("Architect — DevOps Specialist");
+        assertThat(updatedPublicResp.getBody().getPublishedVersion()).isEqualTo(2);
+
+        // ETag should change for version 2
+        assertThat(updatedPublicResp.getHeaders().getETag()).isNotEqualTo(etag);
     }
 
     @Test
@@ -155,6 +179,8 @@ class PublicResumeIntegrationTest {
         assertThat(json).isNotNull();
         assertThat(json).contains("\"name\":\"Cloud Engineer\"");
         assertThat(json).contains("\"targetRole\":\"DevOps Specialist\"");
+        assertThat(json).contains("\"title\":\"Cloud Engineer — DevOps Specialist\"");
+        assertThat(json).contains("\"publishedVersion\":1");
         assertThat(json).contains("\"template\":\"MODERN\"");
 
         // Verify absence of sensitive/internal fields
@@ -196,6 +222,7 @@ class PublicResumeIntegrationTest {
         ResponseEntity<PublicResumeResponse> enabledPublicResp = restTemplate.getForEntity("/api/v1/public/resumes/" + profile.getPublicId(), PublicResumeResponse.class);
         assertThat(enabledPublicResp.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(enabledPublicResp.getBody().getName()).isEqualTo("Staff Engineer");
+        assertThat(enabledPublicResp.getBody().getTitle()).isEqualTo("Staff Engineer — Platform Lead");
 
         // 7. Rotate public token
         String oldPublicId = profile.getPublicId();

@@ -99,7 +99,7 @@ public class PublicResumeService {
                     });
 
             CompiledResumeResponse snapshot = resumeVersionService.compileVersion(profile.getId(), publishedVersion.getId(), profile.getUserId());
-            PublicResumeResponse response = new PublicResumeResponse(snapshot);
+            PublicResumeResponse response = new PublicResumeResponse(publicResumeId, publishedVersion.getVersionNumber(), snapshot);
 
             if (publicResumeCache != null) {
                 publicResumeCache.put(publicResumeId, response);

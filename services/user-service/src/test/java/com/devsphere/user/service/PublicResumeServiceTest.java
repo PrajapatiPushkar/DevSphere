@@ -69,6 +69,9 @@ class PublicResumeServiceTest {
         assertThat(response).isNotNull();
         assertThat(response.getName()).isEqualTo("Backend Dev");
         assertThat(response.getTargetRole()).isEqualTo("Senior Java Engineer");
+        assertThat(response.getTitle()).isEqualTo("Backend Dev — Senior Java Engineer");
+        assertThat(response.getPublicResumeId()).isEqualTo(publicId);
+        assertThat(response.getPublishedVersion()).isEqualTo(1);
         assertThat(response.getTemplate()).isEqualTo(ResumeTemplate.PROFESSIONAL);
     }
 

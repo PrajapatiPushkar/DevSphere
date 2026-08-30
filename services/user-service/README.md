@@ -38,7 +38,7 @@ Kafka Topic (devsphere.user.v1) ──► Consumer ──[Idempotency & Retries]
   - `POST /api/v1/resumes/{resumeId}/public/revoke`: Disable public sharing for resume profile and immediately invalidate public cache.
   - `GET /api/v1/resumes/{resumeId}/public/status`: Retrieve public sharing status and share URL (`PublicShareStatusResponse`).
   - `POST /api/v1/resumes/{resumeId}/public/rotate`: Rotate public token link and invalidate old cached links.
-  - `GET /api/v1/public/resumes/{publicResumeId}`: Unauthenticated read-only access to active published resume version via opaque server-generated UUID (`public_id`), requiring `public_enabled == true` and returning `PublicResumeResponse` stripped of internal DB sequence IDs and private data.
+  - `GET /api/v1/public/resumes/{publicResumeId}`: Unauthenticated read-only access to active published resume version via opaque server-generated UUID (`public_id`), requiring `public_enabled == true`, returning enriched `PublicResumeResponse` (deterministic `title`, `description`, `publicResumeId`, `publishedVersion`, `template`, `sections`), excluding internal DB sequence IDs, supporting HTTP ETags (`If-None-Match` -> `304 Not Modified`) and `Cache-Control: public, max-age=60, must-revalidate`.
 - **401 vs 403 HTTP Semantics**: Unauthenticated requests return `401 Unauthorized`. Accessing unauthorized resources returns `403 Forbidden` or `404 Not Found` for IDOR isolation.
 - **Admin Endpoint Security**: Administrative endpoints (`/api/v1/users/admin/**`) require `ROLE_ADMIN` authority.
 
