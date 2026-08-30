@@ -50,8 +50,7 @@ class ResumeVersionServiceTest {
                 resumeVersionRepository,
                 resumeProfileRepository,
                 resumeCompilationService,
-                objectMapper,
-                meterRegistry
+                objectMapper
         );
 
         testProfile = new ResumeProfile(100L, "Backend Resume", "Senior Java Engineer", ResumeTemplate.PROFESSIONAL);

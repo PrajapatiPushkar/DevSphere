@@ -14,4 +14,6 @@ public interface DeveloperProjectRepository extends JpaRepository<DeveloperProje
     Optional<DeveloperProject> findByIdAndUserId(Long id, Long userId);
 
     Page<DeveloperProject> findAllByUserId(Long userId, Pageable pageable);
+
+    java.util.List<DeveloperProject> findAllByIdInAndUserId(java.util.List<Long> ids, Long userId);
 }

@@ -12,4 +12,6 @@ public interface EducationRepository extends JpaRepository<Education, Long> {
     Optional<Education> findByIdAndUserId(Long id, Long userId);
 
     List<Education> findAllByUserIdOrderByDisplayOrderAscStartDateDesc(Long userId);
+
+    List<Education> findAllByIdInAndUserId(List<Long> ids, Long userId);
 }

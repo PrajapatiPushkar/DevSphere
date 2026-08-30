@@ -42,8 +42,7 @@ class PublicResumeServiceTest {
         publicResumeService = new PublicResumeService(
                 resumeProfileRepository,
                 resumeVersionRepository,
-                resumeVersionService,
-                new SimpleMeterRegistry()
+                resumeVersionService
         );
     }
 

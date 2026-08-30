@@ -1,5 +1,6 @@
 package com.devsphere.user.service;
 
+import com.devsphere.user.cache.PublicResumeCache;
 import com.devsphere.user.dto.compilation.CompiledResumeResponse;
 import com.devsphere.user.dto.publicresume.PublicResumeResponse;
 import com.devsphere.user.entity.ResumeProfile;
@@ -11,6 +12,7 @@ import com.devsphere.user.repository.ResumeVersionRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,24 +27,35 @@ public class PublicResumeService {
     private final ResumeProfileRepository resumeProfileRepository;
     private final ResumeVersionRepository resumeVersionRepository;
     private final ResumeVersionService resumeVersionService;
+    private final PublicResumeCache publicResumeCache;
     private final MeterRegistry meterRegistry;
 
     public PublicResumeService(
             ResumeProfileRepository resumeProfileRepository,
             ResumeVersionRepository resumeVersionRepository,
             ResumeVersionService resumeVersionService) {
-        this(resumeProfileRepository, resumeVersionRepository, resumeVersionService, new SimpleMeterRegistry());
+        this(resumeProfileRepository, resumeVersionRepository, resumeVersionService, null, new SimpleMeterRegistry());
     }
 
-    @Autowired
     public PublicResumeService(
             ResumeProfileRepository resumeProfileRepository,
             ResumeVersionRepository resumeVersionRepository,
             ResumeVersionService resumeVersionService,
+            PublicResumeCache publicResumeCache) {
+        this(resumeProfileRepository, resumeVersionRepository, resumeVersionService, publicResumeCache, new SimpleMeterRegistry());
+    }
+
+    @Autowired(required = false)
+    public PublicResumeService(
+            ResumeProfileRepository resumeProfileRepository,
+            ResumeVersionRepository resumeVersionRepository,
+            ResumeVersionService resumeVersionService,
+            PublicResumeCache publicResumeCache,
             MeterRegistry meterRegistry) {
         this.resumeProfileRepository = resumeProfileRepository;
         this.resumeVersionRepository = resumeVersionRepository;
         this.resumeVersionService = resumeVersionService;
+        this.publicResumeCache = publicResumeCache;
         this.meterRegistry = meterRegistry != null ? meterRegistry : new SimpleMeterRegistry();
     }
 
@@ -53,6 +66,14 @@ public class PublicResumeService {
             if (publicResumeId == null || publicResumeId.isBlank()) {
                 meterRegistry.counter("devsphere_public_resume_access_total", "status", "not_found").increment();
                 throw new ResourceNotFoundException("PUBLIC_RESUME_NOT_FOUND", "Public resume not found");
+            }
+
+            if (publicResumeCache != null) {
+                Optional<PublicResumeResponse> cached = publicResumeCache.get(publicResumeId);
+                if (cached.isPresent()) {
+                    meterRegistry.counter("devsphere_public_resume_access_total", "status", "success").increment();
+                    return cached.get();
+                }
             }
 
             ResumeProfile profile = resumeProfileRepository.findByPublicId(publicResumeId)
@@ -68,11 +89,17 @@ public class PublicResumeService {
                     });
 
             CompiledResumeResponse snapshot = resumeVersionService.compileVersion(profile.getId(), publishedVersion.getId(), profile.getUserId());
+            PublicResumeResponse response = new PublicResumeResponse(snapshot);
+
+            if (publicResumeCache != null) {
+                publicResumeCache.put(publicResumeId, response);
+            }
+
             meterRegistry.counter("devsphere_public_resume_access_total", "status", "success").increment();
             log.info("Successfully resolved public resume for publicId: {} (profileId: {}, versionNumber: {})",
                     publicResumeId, profile.getId(), publishedVersion.getVersionNumber());
 
-            return new PublicResumeResponse(snapshot);
+            return response;
         } catch (ResourceNotFoundException e) {
             throw e;
         } catch (Exception e) {

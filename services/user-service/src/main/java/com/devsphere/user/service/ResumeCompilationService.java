@@ -198,9 +198,8 @@ public class ResumeCompilationService {
         }
 
         List<Long> ids = refs.stream().map(ResumeExperience::getExperienceId).toList();
-        Map<Long, Experience> expMap = experienceRepository.findAllById(ids)
+        Map<Long, Experience> expMap = experienceRepository.findAllByIdInAndUserId(ids, userId)
                 .stream()
-                .filter(e -> e.getUserId().equals(userId))
                 .collect(Collectors.toMap(Experience::getId, Function.identity()));
 
         List<CompiledExperienceResponse> items = new ArrayList<>();
@@ -220,9 +219,8 @@ public class ResumeCompilationService {
         }
 
         List<Long> ids = refs.stream().map(ResumeEducation::getEducationId).toList();
-        Map<Long, Education> eduMap = educationRepository.findAllById(ids)
+        Map<Long, Education> eduMap = educationRepository.findAllByIdInAndUserId(ids, userId)
                 .stream()
-                .filter(e -> e.getUserId().equals(userId))
                 .collect(Collectors.toMap(Education::getId, Function.identity()));
 
         List<CompiledEducationResponse> items = new ArrayList<>();
@@ -242,9 +240,8 @@ public class ResumeCompilationService {
         }
 
         List<Long> ids = refs.stream().map(ResumeSkill::getSkillId).toList();
-        Map<Long, Skill> skillMap = skillRepository.findAllById(ids)
+        Map<Long, Skill> skillMap = skillRepository.findAllByIdInAndUserId(ids, userId)
                 .stream()
-                .filter(s -> s.getUserId().equals(userId))
                 .collect(Collectors.toMap(Skill::getId, Function.identity()));
 
         List<CompiledSkillItemResponse> items = new ArrayList<>();
@@ -264,9 +261,8 @@ public class ResumeCompilationService {
         }
 
         List<Long> ids = refs.stream().map(ResumeCertification::getCertificationId).toList();
-        Map<Long, Certification> certMap = certificationRepository.findAllById(ids)
+        Map<Long, Certification> certMap = certificationRepository.findAllByIdInAndUserId(ids, userId)
                 .stream()
-                .filter(c -> c.getUserId().equals(userId))
                 .collect(Collectors.toMap(Certification::getId, Function.identity()));
 
         List<CompiledCertificationResponse> items = new ArrayList<>();
@@ -286,9 +282,8 @@ public class ResumeCompilationService {
         }
 
         List<Long> ids = refs.stream().map(ResumeProject::getProjectId).toList();
-        Map<Long, DeveloperProject> projMap = projectRepository.findAllById(ids)
+        Map<Long, DeveloperProject> projMap = projectRepository.findAllByIdInAndUserId(ids, userId)
                 .stream()
-                .filter(p -> p.getUserId().equals(userId))
                 .collect(Collectors.toMap(DeveloperProject::getId, Function.identity()));
 
         List<CompiledProjectResponse> items = new ArrayList<>();

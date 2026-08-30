@@ -47,12 +47,21 @@ public class UserProfileService {
         this.tracer = tracer;
     }
 
-    @Transactional
     public UserProfileResponse getOrCreateProfile(Long userId) {
         if (userId == null) {
             throw new IllegalArgumentException("User ID must not be null");
         }
 
+        Optional<UserProfileResponse> cached = userProfileCache.get(userId);
+        if (cached.isPresent()) {
+            return cached.get();
+        }
+
+        return getOrCreateProfileFromDb(userId);
+    }
+
+    @Transactional
+    public UserProfileResponse getOrCreateProfileFromDb(Long userId) {
         ScopedSpan span = tracer != null ? tracer.startScopedSpan("user.profile.get") : null;
         if (span != null) {
             span.tag("service.operation", "getOrCreateProfile");
@@ -60,11 +69,6 @@ public class UserProfileService {
 
         try {
             log.info("User profile requested for userId: {}", userId);
-
-            Optional<UserProfileResponse> cached = userProfileCache.get(userId);
-            if (cached.isPresent()) {
-                return cached.get();
-            }
 
             UserProfile profile = userProfileRepository.findByUserId(userId)
                     .orElseGet(() -> {

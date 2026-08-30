@@ -13,6 +13,8 @@ public interface SkillRepository extends JpaRepository<Skill, Long> {
 
     List<Skill> findAllByUserIdOrderByDisplayOrderAscNameAsc(Long userId);
 
+    List<Skill> findAllByIdInAndUserId(List<Long> ids, Long userId);
+
     boolean existsByUserIdAndNameIgnoreCase(Long userId, String name);
 
     boolean existsByUserIdAndNameIgnoreCaseAndIdNot(Long userId, String name, Long id);

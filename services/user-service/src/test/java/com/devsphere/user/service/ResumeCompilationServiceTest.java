@@ -170,7 +170,7 @@ class ResumeCompilationServiceTest {
         when(resumeProfileRepository.findByIdAndUserId(resumeId, userId)).thenReturn(Optional.of(profile));
         when(resumeSectionRepository.findAllByResumeProfileIdOrderByDisplayOrderAscIdAsc(resumeId)).thenReturn(List.of(expSec));
         when(resumeExperienceRepository.findAllByResumeProfileIdOrderByDisplayOrderAsc(resumeId)).thenReturn(List.of(ref));
-        when(experienceRepository.findAllById(List.of(missingExpId))).thenReturn(List.of());
+        when(experienceRepository.findAllByIdInAndUserId(List.of(missingExpId), userId)).thenReturn(List.of());
 
         CompiledResumeResponse compiled = resumeCompilationService.compileResume(resumeId, userId);
 

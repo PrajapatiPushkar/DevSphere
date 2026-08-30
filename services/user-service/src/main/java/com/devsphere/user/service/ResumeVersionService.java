@@ -32,6 +32,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.devsphere.user.cache.PublicResumeCache;
+
 @Service
 public class ResumeVersionService {
 
@@ -41,6 +43,7 @@ public class ResumeVersionService {
     private final ResumeProfileRepository resumeProfileRepository;
     private final ResumeCompilationService resumeCompilationService;
     private final ObjectMapper objectMapper;
+    private final PublicResumeCache publicResumeCache;
     private final MeterRegistry meterRegistry;
 
     public ResumeVersionService(
@@ -48,20 +51,31 @@ public class ResumeVersionService {
             ResumeProfileRepository resumeProfileRepository,
             ResumeCompilationService resumeCompilationService,
             ObjectMapper objectMapper) {
-        this(resumeVersionRepository, resumeProfileRepository, resumeCompilationService, objectMapper, new SimpleMeterRegistry());
+        this(resumeVersionRepository, resumeProfileRepository, resumeCompilationService, objectMapper, null, new SimpleMeterRegistry());
     }
 
-    @Autowired
     public ResumeVersionService(
             ResumeVersionRepository resumeVersionRepository,
             ResumeProfileRepository resumeProfileRepository,
             ResumeCompilationService resumeCompilationService,
             ObjectMapper objectMapper,
+            PublicResumeCache publicResumeCache) {
+        this(resumeVersionRepository, resumeProfileRepository, resumeCompilationService, objectMapper, publicResumeCache, new SimpleMeterRegistry());
+    }
+
+    @Autowired(required = false)
+    public ResumeVersionService(
+            ResumeVersionRepository resumeVersionRepository,
+            ResumeProfileRepository resumeProfileRepository,
+            ResumeCompilationService resumeCompilationService,
+            ObjectMapper objectMapper,
+            PublicResumeCache publicResumeCache,
             MeterRegistry meterRegistry) {
         this.resumeVersionRepository = resumeVersionRepository;
         this.resumeProfileRepository = resumeProfileRepository;
         this.resumeCompilationService = resumeCompilationService;
         this.objectMapper = objectMapper;
+        this.publicResumeCache = publicResumeCache;
         this.meterRegistry = meterRegistry;
     }
 
@@ -136,7 +150,7 @@ public class ResumeVersionService {
 
     @Transactional
     public ResumeVersionResponse publishVersion(Long resumeId, Long versionId, Long userId) {
-        resumeProfileRepository.findByIdAndUserIdForUpdate(resumeId, userId)
+        ResumeProfile profile = resumeProfileRepository.findByIdAndUserIdForUpdate(resumeId, userId)
                 .orElseThrow(() -> new ResourceNotFoundException("RESUME_NOT_FOUND", "Resume profile not found"));
 
         ResumeVersion version = resumeVersionRepository.findByIdAndResumeProfileIdAndUserId(versionId, resumeId, userId)
@@ -164,6 +178,10 @@ public class ResumeVersionService {
 
         ResumeVersion saved = resumeVersionRepository.save(version);
         resumeVersionRepository.flush();
+
+        if (publicResumeCache != null && profile.getPublicId() != null) {
+            publicResumeCache.evict(profile.getPublicId());
+        }
 
         meterRegistry.counter("devsphere_resume_version_publish_total", "status", "success", "transition", "publish").increment();
         meterRegistry.counter("devsphere_resume_versions_published_total", "status", "success").increment();

@@ -332,7 +332,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
     }
 
-    @ExceptionHandler({io.github.resilience4j.timelimiter.RequestTimeoutException.class, java.util.concurrent.TimeoutException.class})
+    @ExceptionHandler(java.util.concurrent.TimeoutException.class)
     public ResponseEntity<ErrorResponse> handleTimeout(Exception ex, HttpServletRequest request) {
         log.warn("Request timed out for path {}: {}", getPath(request), ex.getMessage());
         ErrorResponse response = new ErrorResponse(

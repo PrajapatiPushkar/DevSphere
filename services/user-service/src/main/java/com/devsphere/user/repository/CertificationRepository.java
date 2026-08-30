@@ -12,4 +12,6 @@ public interface CertificationRepository extends JpaRepository<Certification, Lo
     Optional<Certification> findByIdAndUserId(Long id, Long userId);
 
     List<Certification> findAllByUserIdOrderByDisplayOrderAscIssueDateDesc(Long userId);
+
+    List<Certification> findAllByIdInAndUserId(List<Long> ids, Long userId);
 }
