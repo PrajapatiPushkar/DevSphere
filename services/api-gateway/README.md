@@ -6,8 +6,8 @@ The API Gateway serves as the single external entry point and perimeter security
 ---
 
 ## Current Status
-> **Distributed Rate Limiting & API Protection (Lesson 18)**  
-> The API Gateway enforces distributed Redis token-bucket rate limiting (`rate_limit:*`), authenticated user identity keying (`rate_limit:user:{userId}`), public client IP keying (`rate_limit:ip:{ip}`), strict login/registration rate policies, safe HTTP 429 JSON responses with `Retry-After` headers, configurable fail-open/fail-closed Redis error handling, bounded downstream timeouts, Resilience4j circuit breakers, header sanitization, and low-cardinality Prometheus metrics.
+> **Distributed Observability & Tracing Foundation (Lesson 52)**  
+> The API Gateway implements `TracePropagationGlobalFilter` for end-to-end W3C trace context propagation (`traceparent`, `tracestate`, `X-Trace-Id`). Incoming requests preserve or auto-generate 128-bit trace correlation IDs, propagate them to downstream services (`user-service`, `auth-service`), and echo `X-Trace-Id` in client response headers. Enables Actuator Liveness (`/actuator/health/liveness`) and Readiness (`/actuator/health/readiness`) probes with authorization-gated details (`show-details: when_authorized`), logging MDC correlation, and low-cardinality Prometheus metrics.
 
 ---
 

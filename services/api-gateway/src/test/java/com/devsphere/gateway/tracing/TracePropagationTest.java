@@ -29,7 +29,30 @@ class TracePropagationTest {
     }
 
     @Test
-    @DisplayName("Should accept incoming W3C traceparent header without breaking request execution")
+    @DisplayName("Should inject X-Trace-Id header into Gateway response")
+    void testInjectsXTraceIdResponseHeader() {
+        webTestClient.get()
+                .uri("/fallback/auth-service")
+                .exchange()
+                .expectStatus().isEqualTo(503)
+                .expectHeader().exists("X-Trace-Id");
+    }
+
+    @Test
+    @DisplayName("Should preserve custom incoming X-Trace-Id header in response")
+    void testPreservesCustomXTraceId() {
+        String customTraceId = "custom-trace-id-9999";
+
+        webTestClient.get()
+                .uri("/fallback/auth-service")
+                .header("X-Trace-Id", customTraceId)
+                .exchange()
+                .expectStatus().isEqualTo(503)
+                .expectHeader().valueEquals("X-Trace-Id", customTraceId);
+    }
+
+    @Test
+    @DisplayName("Should extract traceId from W3C traceparent header and inject into X-Trace-Id response header")
     void testIncomingW3CTraceparentHeader() {
         String sampleTraceparent = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01";
 
@@ -37,6 +60,7 @@ class TracePropagationTest {
                 .uri("/fallback/auth-service")
                 .header("traceparent", sampleTraceparent)
                 .exchange()
-                .expectStatus().isEqualTo(503);
+                .expectStatus().isEqualTo(503)
+                .expectHeader().valueEquals("X-Trace-Id", "4bf92f3577b34da6a3ce929d0e0e4736");
     }
 }

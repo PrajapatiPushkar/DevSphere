@@ -382,12 +382,33 @@ public class GlobalExceptionHandler {
     }
 
     private String getTraceId() {
+        return getTraceId(null);
+    }
+
+    private String getTraceId(HttpServletRequest request) {
         try {
             String traceId = MDC.get("traceId");
             if (traceId != null && !traceId.isBlank()) {
                 return traceId;
             }
-            return MDC.get("trace_id");
+            traceId = MDC.get("trace_id");
+            if (traceId != null && !traceId.isBlank()) {
+                return traceId;
+            }
+            if (request != null) {
+                traceId = request.getHeader("X-Trace-Id");
+                if (traceId != null && !traceId.isBlank()) {
+                    return traceId;
+                }
+                String traceparent = request.getHeader("traceparent");
+                if (traceparent != null && !traceparent.isBlank()) {
+                    String[] parts = traceparent.split("-");
+                    if (parts.length >= 2 && !parts[1].isBlank()) {
+                        return parts[1];
+                    }
+                }
+            }
+            return null;
         } catch (Exception e) {
             return null;
         }
