@@ -1,5 +1,6 @@
 package com.devsphere.user.service;
 
+import com.devsphere.user.cache.TransactionAwareCacheInvalidator;
 import com.devsphere.user.cache.UserProfileCache;
 import com.devsphere.user.dto.UpdateUserProfileRequest;
 import com.devsphere.user.dto.UserProfileResponse;
@@ -143,7 +144,7 @@ public class UserProfileService {
             log.info("User profile updated successfully in database for userId: {}", userId);
 
             UserProfileResponse response = mapToResponse(savedProfile);
-            userProfileCache.evict(userId);
+            TransactionAwareCacheInvalidator.executeAfterCommit(() -> userProfileCache.evict(userId));
 
             return response;
         } catch (Exception e) {

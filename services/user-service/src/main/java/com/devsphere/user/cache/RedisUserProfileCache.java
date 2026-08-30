@@ -85,13 +85,21 @@ public class RedisUserProfileCache implements UserProfileCache {
             return;
         }
 
+        meterRegistry.counter("devsphere.cache.invalidation.attempts.total", "cache", "user_profile").increment();
+        if (redisTemplate == null) {
+            meterRegistry.counter("devsphere.cache.invalidation.failures.total", "cache", "user_profile").increment();
+            return;
+        }
+
         String key = buildCacheKey(userId);
         try {
             Boolean deleted = redisTemplate.delete(key);
+            meterRegistry.counter("devsphere.cache.invalidation.success.total", "cache", "user_profile").increment();
             log.info("User profile cache eviction: userId={}, deleted={}", userId, deleted);
         } catch (Exception e) {
+            meterRegistry.counter("devsphere.cache.invalidation.failures.total", "cache", "user_profile").increment();
             meterRegistry.counter("devsphere_resilience_fallback_total", "service", "user-service", "dependency", "redis").increment();
-            log.warn("Redis unavailable during cache eviction for userId={}: {}", userId, e.getMessage());
+            log.warn("Redis unavailable during user profile cache eviction for userId={}: {}", userId, e.getMessage());
         }
     }
 

@@ -40,7 +40,7 @@ class ResumeProfileServiceTest {
     @BeforeEach
     void setUp() {
         meterRegistry = new SimpleMeterRegistry();
-        resumeProfileService = new ResumeProfileService(resumeProfileRepository, resumeSectionRepository, meterRegistry);
+        resumeProfileService = new ResumeProfileService(resumeProfileRepository, resumeSectionRepository, null, meterRegistry);
     }
 
     @Test

@@ -89,15 +89,23 @@ public class RedisPublicResumeCache implements PublicResumeCache {
 
     @Override
     public void evict(String publicResumeId) {
-        if (publicResumeId == null || publicResumeId.isBlank() || redisTemplate == null) {
+        if (publicResumeId == null || publicResumeId.isBlank()) {
+            return;
+        }
+
+        meterRegistry.counter("devsphere.cache.invalidation.attempts.total", "cache", "public_resume").increment();
+        if (redisTemplate == null) {
+            meterRegistry.counter("devsphere.cache.invalidation.failures.total", "cache", "public_resume").increment();
             return;
         }
 
         String key = buildCacheKey(publicResumeId);
         try {
             Boolean deleted = redisTemplate.delete(key);
+            meterRegistry.counter("devsphere.cache.invalidation.success.total", "cache", "public_resume").increment();
             log.info("Public resume cache eviction: publicResumeId={}, deleted={}", publicResumeId, deleted);
         } catch (Exception e) {
+            meterRegistry.counter("devsphere.cache.invalidation.failures.total", "cache", "public_resume").increment();
             meterRegistry.counter("devsphere_resilience_fallback_total", "service", "user-service", "dependency", "redis").increment();
             log.warn("Redis unavailable during public resume cache eviction for publicResumeId={}: {}", publicResumeId, e.getMessage());
         }

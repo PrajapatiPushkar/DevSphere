@@ -18,6 +18,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.devsphere.user.cache.PublicResumeCache;
+import com.devsphere.user.cache.TransactionAwareCacheInvalidator;
+
 @Service
 public class ResumeProfileService {
 
@@ -25,19 +28,26 @@ public class ResumeProfileService {
 
     private final ResumeProfileRepository resumeProfileRepository;
     private final ResumeSectionRepository resumeSectionRepository;
+    private final PublicResumeCache publicResumeCache;
     private final MeterRegistry meterRegistry;
 
     public ResumeProfileService(ResumeProfileRepository resumeProfileRepository, ResumeSectionRepository resumeSectionRepository) {
-        this(resumeProfileRepository, resumeSectionRepository, new SimpleMeterRegistry());
+        this(resumeProfileRepository, resumeSectionRepository, null, new SimpleMeterRegistry());
     }
 
-    @Autowired
+    public ResumeProfileService(ResumeProfileRepository resumeProfileRepository, ResumeSectionRepository resumeSectionRepository, PublicResumeCache publicResumeCache) {
+        this(resumeProfileRepository, resumeSectionRepository, publicResumeCache, new SimpleMeterRegistry());
+    }
+
+    @Autowired(required = false)
     public ResumeProfileService(ResumeProfileRepository resumeProfileRepository,
                                 ResumeSectionRepository resumeSectionRepository,
+                                PublicResumeCache publicResumeCache,
                                 MeterRegistry meterRegistry) {
         this.resumeProfileRepository = resumeProfileRepository;
         this.resumeSectionRepository = resumeSectionRepository;
-        this.meterRegistry = meterRegistry;
+        this.publicResumeCache = publicResumeCache;
+        this.meterRegistry = meterRegistry != null ? meterRegistry : new SimpleMeterRegistry();
     }
 
     @Transactional
@@ -109,6 +119,12 @@ public class ResumeProfileService {
 
         profile.setStatus(ResumeStatus.ARCHIVED);
         ResumeProfile updated = resumeProfileRepository.save(profile);
+
+        if (publicResumeCache != null && profile.getPublicId() != null) {
+            String publicId = profile.getPublicId();
+            TransactionAwareCacheInvalidator.executeAfterCommit(() -> publicResumeCache.evict(publicId));
+        }
+
         meterRegistry.counter("devsphere_resume_archived_total").increment();
         log.info("Archived resume profile ID: {} for userId: {}", updated.getId(), userId);
 
@@ -122,6 +138,12 @@ public class ResumeProfileService {
 
         profile.setStatus(ResumeStatus.ARCHIVED);
         resumeProfileRepository.save(profile);
+
+        if (publicResumeCache != null && profile.getPublicId() != null) {
+            String publicId = profile.getPublicId();
+            TransactionAwareCacheInvalidator.executeAfterCommit(() -> publicResumeCache.evict(publicId));
+        }
+
         meterRegistry.counter("devsphere_resume_deleted_total").increment();
         log.info("Logically archived/deleted resume profile ID: {} for userId: {}", id, userId);
     }

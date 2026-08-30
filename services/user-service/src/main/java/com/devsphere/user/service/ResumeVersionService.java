@@ -33,6 +33,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.devsphere.user.cache.PublicResumeCache;
+import com.devsphere.user.cache.TransactionAwareCacheInvalidator;
 
 @Service
 public class ResumeVersionService {
@@ -180,7 +181,8 @@ public class ResumeVersionService {
         resumeVersionRepository.flush();
 
         if (publicResumeCache != null && profile.getPublicId() != null) {
-            publicResumeCache.evict(profile.getPublicId());
+            String publicId = profile.getPublicId();
+            TransactionAwareCacheInvalidator.executeAfterCommit(() -> publicResumeCache.evict(publicId));
         }
 
         meterRegistry.counter("devsphere_resume_version_publish_total", "status", "success", "transition", "publish").increment();
@@ -215,10 +217,18 @@ public class ResumeVersionService {
             return new ResumeVersionResponse(version, snapshot);
         }
 
+        boolean wasPublished = (version.getStatus() == ResumeVersionStatus.PUBLISHED);
         version.setStatus(ResumeVersionStatus.ARCHIVED);
         version.setArchivedAt(Instant.now());
 
         ResumeVersion saved = resumeVersionRepository.save(version);
+        if (wasPublished && publicResumeCache != null) {
+            ResumeProfile profile = resumeProfileRepository.findByIdAndUserId(resumeId, userId).orElse(null);
+            if (profile != null && profile.getPublicId() != null) {
+                String publicId = profile.getPublicId();
+                TransactionAwareCacheInvalidator.executeAfterCommit(() -> publicResumeCache.evict(publicId));
+            }
+        }
         log.info("Archived resume version ID: {} for resumeId: {} and userId: {}", versionId, resumeId, userId);
 
         CompiledResumeResponse snapshot = deserializeSnapshot(saved.getSnapshotData());
