@@ -47,11 +47,12 @@ class PublicResumeServiceTest {
     }
 
     @Test
-    void getPublicResume_WhenPublishedVersionExists_ReturnsPublicResumeResponse() {
+    void getPublicResume_WhenPublishedVersionExistsAndSharingEnabled_ReturnsPublicResumeResponse() {
         String publicId = "pub-uuid-1234";
         ResumeProfile profile = new ResumeProfile(100L, "Backend Dev", "Senior Java Engineer", ResumeTemplate.PROFESSIONAL);
         profile.setId(10L);
         profile.setPublicId(publicId);
+        profile.setPublicEnabled(true);
 
         ResumeVersion version = new ResumeVersion(10L, 100L, 1, "v1", "{}");
         version.setStatus(ResumeVersionStatus.PUBLISHED);
@@ -72,6 +73,23 @@ class PublicResumeServiceTest {
     }
 
     @Test
+    void getPublicResume_WhenPublicSharingDisabled_ThrowsResourceNotFoundException() {
+        String publicId = "pub-uuid-1234";
+        ResumeProfile profile = new ResumeProfile(100L, "Backend Dev", "Senior Java Engineer", ResumeTemplate.PROFESSIONAL);
+        profile.setId(10L);
+        profile.setPublicId(publicId);
+        profile.setPublicEnabled(false);
+
+        when(resumeProfileRepository.findByPublicId(publicId)).thenReturn(Optional.of(profile));
+
+        assertThatThrownBy(() -> publicResumeService.getPublicResume(publicId))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("Public resume not found");
+
+        verifyNoInteractions(resumeVersionService);
+    }
+
+    @Test
     void getPublicResume_WhenPublicIdNotFound_ThrowsResourceNotFoundException() {
         when(resumeProfileRepository.findByPublicId("non-existent")).thenReturn(Optional.empty());
 
@@ -87,6 +105,7 @@ class PublicResumeServiceTest {
         String publicId = "pub-uuid-1234";
         ResumeProfile profile = new ResumeProfile(100L, "Backend Dev", "Senior Java Engineer", ResumeTemplate.PROFESSIONAL);
         profile.setId(10L);
+        profile.setPublicEnabled(true);
 
         when(resumeProfileRepository.findByPublicId(publicId)).thenReturn(Optional.of(profile));
         when(resumeVersionRepository.findByResumeProfileIdAndStatus(10L, ResumeVersionStatus.PUBLISHED)).thenReturn(Optional.empty());
@@ -117,6 +136,7 @@ class PublicResumeServiceTest {
         ResumeProfile profile = new ResumeProfile(100L, "Backend Dev", "Senior Java Engineer", ResumeTemplate.PROFESSIONAL);
         profile.setId(10L);
         profile.setPublicId(publicId);
+        profile.setPublicEnabled(true);
 
         ResumeVersion version = new ResumeVersion(10L, 100L, 1, "v1", "{}");
         version.setStatus(ResumeVersionStatus.PUBLISHED);
@@ -164,6 +184,78 @@ class PublicResumeServiceTest {
         assertThat(items).hasSize(1);
         assertThat(items.get(0).getCompanyName()).isEqualTo("TechCorp");
         assertThat(items.get(0).getJobTitle()).isEqualTo("Lead Architect");
+    }
+
+    @Test
+    void enablePublicSharing_WhenPublishedVersionExists_EnablesSharing() {
+        Long resumeId = 10L;
+        Long userId = 100L;
+        ResumeProfile profile = new ResumeProfile(userId, "Backend Dev", "Senior Java Engineer", ResumeTemplate.PROFESSIONAL);
+        profile.setId(resumeId);
+        profile.setPublicEnabled(false);
+
+        ResumeVersion publishedVersion = new ResumeVersion(resumeId, userId, 1, "v1", "{}");
+        publishedVersion.setStatus(ResumeVersionStatus.PUBLISHED);
+
+        when(resumeProfileRepository.findByIdAndUserId(resumeId, userId)).thenReturn(Optional.of(profile));
+        when(resumeVersionRepository.findByResumeProfileIdAndStatus(resumeId, ResumeVersionStatus.PUBLISHED)).thenReturn(Optional.of(publishedVersion));
+        when(resumeProfileRepository.save(profile)).thenAnswer(invocation -> invocation.getArgument(0));
+
+        com.devsphere.user.dto.publicresume.PublicShareStatusResponse status = publicResumeService.enablePublicSharing(resumeId, userId);
+
+        assertThat(status.isPublicEnabled()).isTrue();
+        assertThat(status.getPublicEnabledAt()).isNotNull();
+        assertThat(status.getShareUrl()).contains("/api/v1/public/resumes/");
+    }
+
+    @Test
+    void enablePublicSharing_WhenNoPublishedVersion_ThrowsIllegalArgumentException() {
+        Long resumeId = 10L;
+        Long userId = 100L;
+        ResumeProfile profile = new ResumeProfile(userId, "Backend Dev", "Senior Java Engineer", ResumeTemplate.PROFESSIONAL);
+        profile.setId(resumeId);
+
+        when(resumeProfileRepository.findByIdAndUserId(resumeId, userId)).thenReturn(Optional.of(profile));
+        when(resumeVersionRepository.findByResumeProfileIdAndStatus(resumeId, ResumeVersionStatus.PUBLISHED)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> publicResumeService.enablePublicSharing(resumeId, userId))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Cannot enable public sharing without an active published resume version");
+    }
+
+    @Test
+    void revokePublicSharing_RevokesSharing() {
+        Long resumeId = 10L;
+        Long userId = 100L;
+        ResumeProfile profile = new ResumeProfile(userId, "Backend Dev", "Senior Java Engineer", ResumeTemplate.PROFESSIONAL);
+        profile.setId(resumeId);
+        profile.setPublicEnabled(true);
+        profile.setPublicEnabledAt(java.time.Instant.now());
+
+        when(resumeProfileRepository.findByIdAndUserId(resumeId, userId)).thenReturn(Optional.of(profile));
+        when(resumeProfileRepository.save(profile)).thenAnswer(invocation -> invocation.getArgument(0));
+
+        com.devsphere.user.dto.publicresume.PublicShareStatusResponse status = publicResumeService.revokePublicSharing(resumeId, userId);
+
+        assertThat(status.isPublicEnabled()).isFalse();
+        assertThat(status.getPublicEnabledAt()).isNull();
+    }
+
+    @Test
+    void rotatePublicToken_ChangesPublicId() {
+        Long resumeId = 10L;
+        Long userId = 100L;
+        ResumeProfile profile = new ResumeProfile(userId, "Backend Dev", "Senior Java Engineer", ResumeTemplate.PROFESSIONAL);
+        profile.setId(resumeId);
+        String oldPublicId = profile.getPublicId();
+
+        when(resumeProfileRepository.findByIdAndUserId(resumeId, userId)).thenReturn(Optional.of(profile));
+        when(resumeProfileRepository.save(profile)).thenAnswer(invocation -> invocation.getArgument(0));
+
+        com.devsphere.user.dto.publicresume.PublicShareStatusResponse status = publicResumeService.rotatePublicToken(resumeId, userId);
+
+        assertThat(status.getPublicResumeId()).isNotEqualTo(oldPublicId);
+        assertThat(status.getShareUrl()).contains(status.getPublicResumeId());
     }
 }
 

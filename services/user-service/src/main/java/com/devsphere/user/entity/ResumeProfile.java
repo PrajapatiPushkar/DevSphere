@@ -48,6 +48,12 @@ public class ResumeProfile {
     @Column(name = "public_id", nullable = false, unique = true, length = 36)
     private String publicId;
 
+    @Column(name = "public_enabled", nullable = false)
+    private Boolean publicEnabled = false;
+
+    @Column(name = "public_enabled_at")
+    private Instant publicEnabledAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -64,6 +70,7 @@ public class ResumeProfile {
         this.template = template;
         this.status = ResumeStatus.DRAFT;
         this.publicId = java.util.UUID.randomUUID().toString();
+        this.publicEnabled = false;
     }
 
     @PrePersist
@@ -80,6 +87,9 @@ public class ResumeProfile {
         }
         if (this.publicId == null || this.publicId.isBlank()) {
             this.publicId = java.util.UUID.randomUUID().toString();
+        }
+        if (this.publicEnabled == null) {
+            this.publicEnabled = false;
         }
     }
 
@@ -166,6 +176,26 @@ public class ResumeProfile {
 
     public void setPublicId(String publicId) {
         this.publicId = publicId;
+    }
+
+    public Boolean getPublicEnabled() {
+        return publicEnabled != null && publicEnabled;
+    }
+
+    public boolean isPublicEnabled() {
+        return Boolean.TRUE.equals(publicEnabled);
+    }
+
+    public void setPublicEnabled(Boolean publicEnabled) {
+        this.publicEnabled = publicEnabled != null ? publicEnabled : false;
+    }
+
+    public Instant getPublicEnabledAt() {
+        return publicEnabledAt;
+    }
+
+    public void setPublicEnabledAt(Instant publicEnabledAt) {
+        this.publicEnabledAt = publicEnabledAt;
     }
 
     public Long getVersion() {

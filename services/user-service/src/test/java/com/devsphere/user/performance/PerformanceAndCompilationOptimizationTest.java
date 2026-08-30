@@ -166,6 +166,7 @@ class PerformanceAndCompilationOptimizationTest {
         ResumeProfile profile = new ResumeProfile(userId, "My Resume", "Lead Architect", ResumeTemplate.PROFESSIONAL);
         profile.setId(profileId);
         profile.setPublicId(publicId);
+        profile.setPublicEnabled(true);
 
         ResumeVersion publishedVersion = new ResumeVersion(profileId, userId, 1, "V1", "{}");
         publishedVersion.setId(versionId);
