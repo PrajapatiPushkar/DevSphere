@@ -40,7 +40,7 @@ public class GlobalExceptionHandler {
                 ex.getMessage(),
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
@@ -55,7 +55,7 @@ public class GlobalExceptionHandler {
                 ex.getMessage(),
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
@@ -70,7 +70,7 @@ public class GlobalExceptionHandler {
                 "You do not have permission to access this resource",
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(response);
     }
@@ -91,11 +91,11 @@ public class GlobalExceptionHandler {
         ErrorResponse response = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 HttpStatus.BAD_REQUEST.name(),
-                "VALIDATION_FAILED",
+                "VALIDATION_ERROR",
                 primaryMessage,
                 getPath(request),
                 fieldErrors.isEmpty() ? null : fieldErrors,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
@@ -111,11 +111,11 @@ public class GlobalExceptionHandler {
         ErrorResponse response = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 HttpStatus.BAD_REQUEST.name(),
-                "VALIDATION_FAILED",
+                "VALIDATION_ERROR",
                 "Request validation failed",
                 getPath(request),
                 fieldErrors.isEmpty() ? null : fieldErrors,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
@@ -130,7 +130,7 @@ public class GlobalExceptionHandler {
                 ex.getMessage(),
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
@@ -145,7 +145,7 @@ public class GlobalExceptionHandler {
                 ex.getMessage(),
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
@@ -160,7 +160,7 @@ public class GlobalExceptionHandler {
                 ex.getMessage(),
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
@@ -175,7 +175,7 @@ public class GlobalExceptionHandler {
                 ex.getMessage(),
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
@@ -190,7 +190,7 @@ public class GlobalExceptionHandler {
                 ex.getMessage(),
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
@@ -205,7 +205,7 @@ public class GlobalExceptionHandler {
                 ex.getMessage(),
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
@@ -220,7 +220,7 @@ public class GlobalExceptionHandler {
                 "The resource was modified by another request",
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
@@ -235,7 +235,7 @@ public class GlobalExceptionHandler {
                 "Database constraint violation occurred",
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
@@ -250,7 +250,7 @@ public class GlobalExceptionHandler {
                 "Could not acquire database lock within timeout",
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
@@ -265,7 +265,7 @@ public class GlobalExceptionHandler {
                 "Malformed JSON request payload or invalid data format",
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
@@ -282,7 +282,7 @@ public class GlobalExceptionHandler {
                 message,
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
@@ -297,7 +297,7 @@ public class GlobalExceptionHandler {
                 "HTTP method " + ex.getMethod() + " is not supported for this endpoint",
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(response);
     }
@@ -312,7 +312,7 @@ public class GlobalExceptionHandler {
                 "System rate or concurrency limit exceeded. Please try again later.",
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
     }
@@ -327,7 +327,7 @@ public class GlobalExceptionHandler {
                 "Downstream service circuit breaker is OPEN",
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
     }
@@ -342,7 +342,7 @@ public class GlobalExceptionHandler {
                 "Rate limit exceeded. Please try again later.",
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(response);
     }
@@ -357,7 +357,7 @@ public class GlobalExceptionHandler {
                 "Operation timed out while processing request",
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT).body(response);
     }
@@ -372,7 +372,7 @@ public class GlobalExceptionHandler {
                 "An unexpected internal error occurred",
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }

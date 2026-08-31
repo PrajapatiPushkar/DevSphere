@@ -61,15 +61,20 @@ class DevSphereApiGatewayApplicationTests {
     }
 
     @Test
-    @DisplayName("Protected endpoint /api/demo/protected without token returns 401 Unauthorized")
+    @DisplayName("Protected endpoint /api/demo/protected without token returns 401 Unauthorized with standard error response")
     void protectedEndpointWithoutTokenReturns401() {
         webTestClient.get()
                 .uri("/api/demo/protected")
+                .header("X-Trace-Id", "gateway-trace-101")
                 .exchange()
                 .expectStatus().isUnauthorized()
                 .expectBody()
+                .jsonPath("$.status").isEqualTo(401)
                 .jsonPath("$.code").isEqualTo("UNAUTHORIZED")
-                .jsonPath("$.message").isEqualTo("Authentication is required");
+                .jsonPath("$.message").isEqualTo("Authentication is required")
+                .jsonPath("$.path").isEqualTo("/api/demo/protected")
+                .jsonPath("$.timestamp").exists()
+                .jsonPath("$.traceId").isEqualTo("gateway-trace-101");
     }
 
     @Test

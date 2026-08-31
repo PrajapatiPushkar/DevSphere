@@ -104,15 +104,32 @@ public class DistributedRateLimiterGatewayFilterFactory
         response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
         response.getHeaders().set("Retry-After", "1");
 
-        String jsonBody = """
-                {
-                  "status": 429,
-                  "error": "TOO_MANY_REQUESTS",
-                  "message": "Rate limit exceeded. Please try again later."
+        String path = exchange.getRequest().getPath().value();
+        String traceId = exchange.getRequest().getHeaders().getFirst("X-Trace-Id");
+        if (traceId == null || traceId.isBlank()) {
+            String traceparent = exchange.getRequest().getHeaders().getFirst("traceparent");
+            if (traceparent != null && !traceparent.isBlank()) {
+                String[] parts = traceparent.split("-");
+                if (parts.length >= 2 && !parts[1].isBlank()) {
+                    traceId = parts[1];
                 }
-                """;
+            }
+        }
 
-        DataBuffer buffer = response.bufferFactory().wrap(jsonBody.getBytes(StandardCharsets.UTF_8));
+        StringBuilder json = new StringBuilder();
+        json.append("{\n");
+        json.append("  \"timestamp\": \"").append(java.time.Instant.now().toString()).append("\",\n");
+        json.append("  \"status\": 429,\n");
+        json.append("  \"error\": \"TOO_MANY_REQUESTS\",\n");
+        json.append("  \"code\": \"RATE_LIMIT_EXCEEDED\",\n");
+        json.append("  \"message\": \"Rate limit exceeded. Please try again later.\",\n");
+        json.append("  \"path\": \"").append(path).append("\"");
+        if (traceId != null && !traceId.isBlank()) {
+            json.append(",\n  \"traceId\": \"").append(traceId).append("\"");
+        }
+        json.append("\n}");
+
+        DataBuffer buffer = response.bufferFactory().wrap(json.toString().getBytes(StandardCharsets.UTF_8));
         return response.writeWith(Mono.just(buffer));
     }
 

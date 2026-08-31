@@ -138,16 +138,32 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         response.setStatusCode(status);
         response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
 
-        String jsonResponse = String.format("""
-                {
-                  "status": %d,
-                  "error": "%s",
-                  "code": "%s",
-                  "message": "%s"
+        String path = exchange.getRequest().getURI().getPath();
+        String traceId = exchange.getRequest().getHeaders().getFirst("X-Trace-Id");
+        if (traceId == null || traceId.isBlank()) {
+            String traceparent = exchange.getRequest().getHeaders().getFirst("traceparent");
+            if (traceparent != null && !traceparent.isBlank()) {
+                String[] parts = traceparent.split("-");
+                if (parts.length >= 2 && !parts[1].isBlank()) {
+                    traceId = parts[1];
                 }
-                """, status.value(), error, code, message);
+            }
+        }
 
-        DataBuffer buffer = response.bufferFactory().wrap(jsonResponse.getBytes(StandardCharsets.UTF_8));
+        StringBuilder json = new StringBuilder();
+        json.append("{\n");
+        json.append("  \"timestamp\": \"").append(java.time.Instant.now().toString()).append("\",\n");
+        json.append("  \"status\": ").append(status.value()).append(",\n");
+        json.append("  \"error\": \"").append(error).append("\",\n");
+        json.append("  \"code\": \"").append(code).append("\",\n");
+        json.append("  \"message\": \"").append(message).append("\",\n");
+        json.append("  \"path\": \"").append(path).append("\"");
+        if (traceId != null && !traceId.isBlank()) {
+            json.append(",\n  \"traceId\": \"").append(traceId).append("\"");
+        }
+        json.append("\n}");
+
+        DataBuffer buffer = response.bufferFactory().wrap(json.toString().getBytes(StandardCharsets.UTF_8));
         return response.writeWith(Mono.just(buffer));
     }
 

@@ -93,10 +93,22 @@ class GlobalExceptionHandlerTest {
         assertThat(body).isNotNull();
         assertThat(body.getStatus()).isEqualTo(400);
         assertThat(body.getError()).isEqualTo("BAD_REQUEST");
-        assertThat(body.getCode()).isEqualTo("VALIDATION_FAILED");
+        assertThat(body.getCode()).isEqualTo("VALIDATION_ERROR");
         assertThat(body.getMessage()).isEqualTo("name: Name cannot be blank");
         assertThat(body.getErrors()).containsEntry("name", "Name cannot be blank");
         assertThat(body.getPath()).isEqualTo("/api/v1/resumes/123");
+    }
+
+    @Test
+    void handleResourceNotFound_IncludesTraceIdFromHeaderWhenAvailable() {
+        request.addHeader("X-Trace-Id", "test-trace-999");
+        ResourceNotFoundException ex = new ResourceNotFoundException("RESUME_NOT_FOUND", "Resume profile not found");
+
+        ResponseEntity<ErrorResponse> entity = exceptionHandler.handleResourceNotFound(ex, request);
+
+        ErrorResponse body = entity.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.getTraceId()).isEqualTo("test-trace-999");
     }
 
     @Test

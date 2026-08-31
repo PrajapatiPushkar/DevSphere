@@ -32,7 +32,7 @@ public class GlobalExceptionHandler {
                 ex.getMessage(),
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
@@ -47,7 +47,7 @@ public class GlobalExceptionHandler {
                 "Database constraint violation occurred",
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
@@ -62,7 +62,7 @@ public class GlobalExceptionHandler {
                 ex.getMessage(),
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
     }
@@ -81,7 +81,7 @@ public class GlobalExceptionHandler {
                 "Request validation failed",
                 getPath(request),
                 errors,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
@@ -96,7 +96,7 @@ public class GlobalExceptionHandler {
                 "Malformed JSON request payload or invalid data format",
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
@@ -111,7 +111,7 @@ public class GlobalExceptionHandler {
                 "HTTP method " + ex.getMethod() + " is not supported for this endpoint",
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(response);
     }
@@ -126,7 +126,7 @@ public class GlobalExceptionHandler {
                 "System rate or concurrency limit exceeded. Please try again later.",
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
     }
@@ -141,7 +141,7 @@ public class GlobalExceptionHandler {
                 "Downstream service circuit breaker is OPEN",
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(response);
     }
@@ -156,7 +156,7 @@ public class GlobalExceptionHandler {
                 "Rate limit exceeded. Please try again later.",
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).body(response);
     }
@@ -171,7 +171,7 @@ public class GlobalExceptionHandler {
                 "Operation timed out while processing request",
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT).body(response);
     }
@@ -186,7 +186,7 @@ public class GlobalExceptionHandler {
                 "An unexpected error occurred. Please try again later.",
                 getPath(request),
                 null,
-                getTraceId()
+                getTraceId(request)
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
     }

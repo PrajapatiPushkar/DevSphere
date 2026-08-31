@@ -53,6 +53,18 @@ class AuthGlobalExceptionHandlerTest {
     }
 
     @Test
+    void handleInvalidCredentials_IncludesTraceIdFromHeaderWhenAvailable() {
+        request.addHeader("X-Trace-Id", "auth-trace-12345");
+        InvalidCredentialsException ex = new InvalidCredentialsException("Invalid email or password");
+
+        ResponseEntity<ErrorResponse> entity = exceptionHandler.handleInvalidCredentials(ex, request);
+
+        ErrorResponse body = entity.getBody();
+        assertThat(body).isNotNull();
+        assertThat(body.getTraceId()).isEqualTo("auth-trace-12345");
+    }
+
+    @Test
     void handleGenericException_Returns500WithGenericMessage() {
         RuntimeException ex = new RuntimeException("Database connection timeout");
 
