@@ -17,6 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -43,7 +44,7 @@ class PublicResumeControllerTest {
         response.setPublicResumeId(publicId);
         response.setPublishedVersion(1);
 
-        when(publicResumeService.getPublicResume(publicId)).thenReturn(response);
+        when(publicResumeService.getPublicResume(eq(publicId), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any())).thenReturn(response);
 
         MvcResult result = mockMvc.perform(get("/api/v1/public/resumes/{publicResumeId}", publicId)
                         .contentType(MediaType.APPLICATION_JSON))
@@ -77,7 +78,7 @@ class PublicResumeControllerTest {
     @Test
     void getPublicResume_WhenNotFound_Returns404() throws Exception {
         String publicId = "non-existent";
-        when(publicResumeService.getPublicResume(publicId))
+        when(publicResumeService.getPublicResume(eq(publicId), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
                 .thenThrow(new ResourceNotFoundException("PUBLIC_RESUME_NOT_FOUND", "Public resume not found"));
 
         mockMvc.perform(get("/api/v1/public/resumes/{publicResumeId}", publicId)

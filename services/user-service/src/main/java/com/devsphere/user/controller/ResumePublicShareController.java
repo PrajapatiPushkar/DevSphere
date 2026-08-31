@@ -21,9 +21,13 @@ public class ResumePublicShareController {
     private static final String AUTH_USER_ID_HEADER = "X-Authenticated-User-Id";
 
     private final PublicResumeService publicResumeService;
+    private final com.devsphere.user.service.PublicResumeAnalyticsService analyticsService;
 
-    public ResumePublicShareController(PublicResumeService publicResumeService) {
+    public ResumePublicShareController(
+            PublicResumeService publicResumeService,
+            com.devsphere.user.service.PublicResumeAnalyticsService analyticsService) {
         this.publicResumeService = publicResumeService;
+        this.analyticsService = analyticsService;
     }
 
     @PostMapping("/share")
@@ -59,6 +63,15 @@ public class ResumePublicShareController {
             @PathVariable Long resumeId) {
         Long userId = extractAndValidateUserId(authUserIdHeader);
         PublicShareStatusResponse response = publicResumeService.rotatePublicToken(resumeId, userId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/analytics")
+    public ResponseEntity<com.devsphere.user.dto.publicresume.PublicResumeAnalyticsResponse> getPublicResumeAnalytics(
+            @RequestHeader(value = AUTH_USER_ID_HEADER, required = false) String authUserIdHeader,
+            @PathVariable Long resumeId) {
+        Long userId = extractAndValidateUserId(authUserIdHeader);
+        com.devsphere.user.dto.publicresume.PublicResumeAnalyticsResponse response = analyticsService.getResumeAnalytics(resumeId, userId);
         return ResponseEntity.ok(response);
     }
 

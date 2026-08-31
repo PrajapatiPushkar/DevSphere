@@ -30,8 +30,16 @@ public class PublicResumeController {
     @GetMapping("/{publicResumeId}")
     public ResponseEntity<PublicResumeResponse> getPublicResume(
             @PathVariable String publicResumeId,
-            @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch) {
-        PublicResumeResponse response = publicResumeService.getPublicResume(publicResumeId);
+            @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch,
+            @RequestHeader(value = "X-Forwarded-For", required = false) String xForwardedFor,
+            @RequestHeader(value = HttpHeaders.REFERER, required = false) String referrer,
+            @RequestHeader(value = HttpHeaders.USER_AGENT, required = false) String userAgent,
+            jakarta.servlet.http.HttpServletRequest request) {
+        String clientIp = xForwardedFor != null && !xForwardedFor.isBlank()
+                ? xForwardedFor.split(",")[0].trim()
+                : (request != null ? request.getRemoteAddr() : "127.0.0.1");
+
+        PublicResumeResponse response = publicResumeService.getPublicResume(publicResumeId, clientIp, referrer, userAgent);
 
         String etag = computeEtag(publicResumeId, response);
 

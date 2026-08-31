@@ -33,13 +33,14 @@ public class PublicResumeService {
     private final ResumeVersionRepository resumeVersionRepository;
     private final ResumeVersionService resumeVersionService;
     private final PublicResumeCache publicResumeCache;
+    private final org.springframework.context.ApplicationEventPublisher eventPublisher;
     private final MeterRegistry meterRegistry;
 
     public PublicResumeService(
             ResumeProfileRepository resumeProfileRepository,
             ResumeVersionRepository resumeVersionRepository,
             ResumeVersionService resumeVersionService) {
-        this(resumeProfileRepository, resumeVersionRepository, resumeVersionService, null, new SimpleMeterRegistry());
+        this(resumeProfileRepository, resumeVersionRepository, resumeVersionService, null, null, new SimpleMeterRegistry());
     }
 
     public PublicResumeService(
@@ -47,7 +48,16 @@ public class PublicResumeService {
             ResumeVersionRepository resumeVersionRepository,
             ResumeVersionService resumeVersionService,
             PublicResumeCache publicResumeCache) {
-        this(resumeProfileRepository, resumeVersionRepository, resumeVersionService, publicResumeCache, new SimpleMeterRegistry());
+        this(resumeProfileRepository, resumeVersionRepository, resumeVersionService, publicResumeCache, null, new SimpleMeterRegistry());
+    }
+
+    public PublicResumeService(
+            ResumeProfileRepository resumeProfileRepository,
+            ResumeVersionRepository resumeVersionRepository,
+            ResumeVersionService resumeVersionService,
+            PublicResumeCache publicResumeCache,
+            org.springframework.context.ApplicationEventPublisher eventPublisher) {
+        this(resumeProfileRepository, resumeVersionRepository, resumeVersionService, publicResumeCache, eventPublisher, new SimpleMeterRegistry());
     }
 
     @Autowired(required = false)
@@ -56,16 +66,23 @@ public class PublicResumeService {
             ResumeVersionRepository resumeVersionRepository,
             ResumeVersionService resumeVersionService,
             PublicResumeCache publicResumeCache,
+            org.springframework.context.ApplicationEventPublisher eventPublisher,
             MeterRegistry meterRegistry) {
         this.resumeProfileRepository = resumeProfileRepository;
         this.resumeVersionRepository = resumeVersionRepository;
         this.resumeVersionService = resumeVersionService;
         this.publicResumeCache = publicResumeCache;
+        this.eventPublisher = eventPublisher;
         this.meterRegistry = meterRegistry != null ? meterRegistry : new SimpleMeterRegistry();
     }
 
     @Transactional(readOnly = true)
     public PublicResumeResponse getPublicResume(String publicResumeId) {
+        return getPublicResume(publicResumeId, null, null, null);
+    }
+
+    @Transactional(readOnly = true)
+    public PublicResumeResponse getPublicResume(String publicResumeId, String clientIp, String referrer, String userAgent) {
         Timer.Sample sample = Timer.start(meterRegistry);
         try {
             if (publicResumeId == null || publicResumeId.isBlank()) {
@@ -77,6 +94,17 @@ public class PublicResumeService {
                 Optional<PublicResumeResponse> cached = publicResumeCache.get(publicResumeId);
                 if (cached.isPresent()) {
                     meterRegistry.counter("devsphere_public_resume_access_total", "status", "success").increment();
+                    if (eventPublisher != null) {
+                        try {
+                            resumeProfileRepository.findByPublicId(publicResumeId).ifPresent(p ->
+                                eventPublisher.publishEvent(new com.devsphere.user.event.PublicResumeViewEvent(
+                                        publicResumeId, p.getId(), clientIp, referrer, userAgent
+                                ))
+                            );
+                        } catch (Exception e) {
+                            log.warn("Could not publish view event during public resume cache hit for {}: {}", publicResumeId, e.getMessage());
+                        }
+                    }
                     return cached.get();
                 }
             }
@@ -90,6 +118,12 @@ public class PublicResumeService {
             if (!profile.isPublicEnabled() || profile.getStatus() == ResumeStatus.ARCHIVED) {
                 meterRegistry.counter("devsphere_public_resume_access_total", "status", "not_found").increment();
                 throw new ResourceNotFoundException("PUBLIC_RESUME_NOT_FOUND", "Public resume not found");
+            }
+
+            if (eventPublisher != null) {
+                eventPublisher.publishEvent(new com.devsphere.user.event.PublicResumeViewEvent(
+                        publicResumeId, profile.getId(), clientIp, referrer, userAgent
+                ));
             }
 
             ResumeVersion publishedVersion = resumeVersionRepository.findByResumeProfileIdAndStatus(profile.getId(), ResumeVersionStatus.PUBLISHED)

@@ -106,7 +106,7 @@ class PerformanceAndCompilationOptimizationTest {
         );
 
         publicResumeService = new PublicResumeService(
-                resumeProfileRepository, resumeVersionRepository, resumeVersionService, publicResumeCache, meterRegistry
+                resumeProfileRepository, resumeVersionRepository, resumeVersionService, publicResumeCache, null, meterRegistry
         );
 
         userProfileService = new UserProfileService(

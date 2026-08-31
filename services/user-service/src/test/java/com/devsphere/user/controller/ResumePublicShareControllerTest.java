@@ -33,6 +33,9 @@ class ResumePublicShareControllerTest {
     private PublicResumeService publicResumeService;
 
     @MockBean
+    private com.devsphere.user.service.PublicResumeAnalyticsService analyticsService;
+
+    @MockBean
     private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @Test
