@@ -196,6 +196,10 @@ public class PublicResumeService {
             TransactionAwareCacheInvalidator.executeAfterCommit(() -> publicResumeCache.evict(publicId));
         }
 
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new com.devsphere.user.event.PublicResumeShareRevokedEvent(resumeId, publicId, userId));
+        }
+
         meterRegistry.counter("devsphere_public_resume_sharing_total", "action", "revoke").increment();
         log.info("Public resume sharing revoked for resumeId: {} (publicId: {})", resumeId, publicId);
 

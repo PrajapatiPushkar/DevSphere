@@ -45,6 +45,7 @@ public class ResumeVersionService {
     private final ResumeCompilationService resumeCompilationService;
     private final ObjectMapper objectMapper;
     private final PublicResumeCache publicResumeCache;
+    private final com.devsphere.user.event.DomainEventPublisher eventPublisher;
     private final MeterRegistry meterRegistry;
 
     public ResumeVersionService(
@@ -52,7 +53,7 @@ public class ResumeVersionService {
             ResumeProfileRepository resumeProfileRepository,
             ResumeCompilationService resumeCompilationService,
             ObjectMapper objectMapper) {
-        this(resumeVersionRepository, resumeProfileRepository, resumeCompilationService, objectMapper, null, new SimpleMeterRegistry());
+        this(resumeVersionRepository, resumeProfileRepository, resumeCompilationService, objectMapper, null, null, new SimpleMeterRegistry());
     }
 
     public ResumeVersionService(
@@ -61,7 +62,17 @@ public class ResumeVersionService {
             ResumeCompilationService resumeCompilationService,
             ObjectMapper objectMapper,
             PublicResumeCache publicResumeCache) {
-        this(resumeVersionRepository, resumeProfileRepository, resumeCompilationService, objectMapper, publicResumeCache, new SimpleMeterRegistry());
+        this(resumeVersionRepository, resumeProfileRepository, resumeCompilationService, objectMapper, publicResumeCache, null, new SimpleMeterRegistry());
+    }
+
+    public ResumeVersionService(
+            ResumeVersionRepository resumeVersionRepository,
+            ResumeProfileRepository resumeProfileRepository,
+            ResumeCompilationService resumeCompilationService,
+            ObjectMapper objectMapper,
+            PublicResumeCache publicResumeCache,
+            com.devsphere.user.event.DomainEventPublisher eventPublisher) {
+        this(resumeVersionRepository, resumeProfileRepository, resumeCompilationService, objectMapper, publicResumeCache, eventPublisher, new SimpleMeterRegistry());
     }
 
     @Autowired(required = false)
@@ -71,13 +82,15 @@ public class ResumeVersionService {
             ResumeCompilationService resumeCompilationService,
             ObjectMapper objectMapper,
             PublicResumeCache publicResumeCache,
+            com.devsphere.user.event.DomainEventPublisher eventPublisher,
             MeterRegistry meterRegistry) {
         this.resumeVersionRepository = resumeVersionRepository;
         this.resumeProfileRepository = resumeProfileRepository;
         this.resumeCompilationService = resumeCompilationService;
         this.objectMapper = objectMapper;
         this.publicResumeCache = publicResumeCache;
-        this.meterRegistry = meterRegistry;
+        this.eventPublisher = eventPublisher;
+        this.meterRegistry = meterRegistry != null ? meterRegistry : new SimpleMeterRegistry();
     }
 
     @Transactional
@@ -183,6 +196,12 @@ public class ResumeVersionService {
         if (publicResumeCache != null && profile.getPublicId() != null) {
             String publicId = profile.getPublicId();
             TransactionAwareCacheInvalidator.executeAfterCommit(() -> publicResumeCache.evict(publicId));
+        }
+
+        if (eventPublisher != null) {
+            eventPublisher.publish(new com.devsphere.user.event.ResumeVersionPublishedEvent(
+                    resumeId, saved.getId(), saved.getVersionNumber(), userId
+            ));
         }
 
         meterRegistry.counter("devsphere_resume_version_publish_total", "status", "success", "transition", "publish").increment();

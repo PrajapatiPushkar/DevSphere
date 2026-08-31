@@ -69,3 +69,5 @@ management:
       enabled: true
     probes:
       enabled: true
+    redis:
+      enabled: false

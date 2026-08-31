@@ -2,22 +2,33 @@ package com.devsphere.user.event;
 
 import java.time.Instant;
 
-public class PublicResumeViewEvent {
+public class PublicResumeViewEvent extends BaseDomainEvent {
+
+    public static final String EVENT_TYPE = "PublicResumeViewed";
 
     private final String publicId;
     private final Long resumeProfileId;
     private final String clientIp;
     private final String referrer;
     private final String userAgent;
-    private final Instant timestamp;
 
     public PublicResumeViewEvent(String publicId, Long resumeProfileId, String clientIp, String referrer, String userAgent) {
+        super(EVENT_TYPE, 1);
         this.publicId = publicId;
         this.resumeProfileId = resumeProfileId;
         this.clientIp = clientIp;
         this.referrer = referrer;
         this.userAgent = userAgent;
-        this.timestamp = Instant.now();
+    }
+
+    public PublicResumeViewEvent(String eventId, Integer eventVersion, Instant occurredAt, String traceId,
+                                 String publicId, Long resumeProfileId, String clientIp, String referrer, String userAgent) {
+        super(eventId, EVENT_TYPE, eventVersion, occurredAt, traceId);
+        this.publicId = publicId;
+        this.resumeProfileId = resumeProfileId;
+        this.clientIp = clientIp;
+        this.referrer = referrer;
+        this.userAgent = userAgent;
     }
 
     public String getPublicId() {
@@ -41,6 +52,6 @@ public class PublicResumeViewEvent {
     }
 
     public Instant getTimestamp() {
-        return timestamp;
+        return getOccurredAt();
     }
 }

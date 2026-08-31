@@ -76,7 +76,7 @@ class CacheConsistencyAndInvalidationTest {
         publicResumeCache = new RedisPublicResumeCache(publicResumeRedisTemplate, meterRegistry, Duration.ofMinutes(10));
 
         userProfileService = new UserProfileService(userProfileRepository, userProfileCache, meterRegistry, null);
-        resumeVersionService = new ResumeVersionService(resumeVersionRepository, resumeProfileRepository, resumeCompilationService, new ObjectMapper(), publicResumeCache, meterRegistry);
+        resumeVersionService = new ResumeVersionService(resumeVersionRepository, resumeProfileRepository, resumeCompilationService, new ObjectMapper(), publicResumeCache, null, meterRegistry);
         resumeProfileService = new ResumeProfileService(resumeProfileRepository, mock(com.devsphere.user.repository.ResumeSectionRepository.class), publicResumeCache, meterRegistry);
     }
 

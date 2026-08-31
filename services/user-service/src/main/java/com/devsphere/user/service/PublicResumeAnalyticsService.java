@@ -75,7 +75,12 @@ public class PublicResumeAnalyticsService {
             return;
         }
 
+        String previousTrace = org.slf4j.MDC.get("traceId");
         try {
+            if (event.getTraceId() != null && !event.getTraceId().isBlank()) {
+                org.slf4j.MDC.put("traceId", event.getTraceId());
+            }
+
             String ipHash = hashIpAddress(event.getClientIp());
             String referrerDomain = sanitizeReferrer(event.getReferrer());
             String truncatedUserAgent = truncate(event.getUserAgent(), 500);
@@ -95,10 +100,17 @@ public class PublicResumeAnalyticsService {
             }
 
             meterRegistry.counter("devsphere_public_resume_views_total", "status", "recorded").increment();
-            log.info("Recorded public resume view for publicId={}, profileId={}", event.getPublicId(), event.getResumeProfileId());
+            log.info("Recorded public resume view for publicId={}, profileId={}, eventId={}",
+                    event.getPublicId(), event.getResumeProfileId(), event.getEventId());
         } catch (Exception e) {
             meterRegistry.counter("devsphere_public_resume_views_total", "status", "error").increment();
             log.error("Failed to record public resume view for publicId={}: {}", event.getPublicId(), e.getMessage(), e);
+        } finally {
+            if (previousTrace != null) {
+                org.slf4j.MDC.put("traceId", previousTrace);
+            } else {
+                org.slf4j.MDC.remove("traceId");
+            }
         }
     }
 

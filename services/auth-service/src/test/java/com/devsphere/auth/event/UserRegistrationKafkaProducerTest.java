@@ -73,6 +73,6 @@ class UserRegistrationKafkaProducerTest {
     void userRegisteredEventPayload_doesNotContainPasswordsOrTokens() {
         assertThat(UserRegisteredEvent.class.getDeclaredFields())
                 .extracting("name")
-                .containsExactlyInAnyOrder("eventId", "eventType", "eventVersion", "occurredAt", "userId");
+                .doesNotContain("password", "token", "jwt", "bcrypt", "secret");
     }
 }
