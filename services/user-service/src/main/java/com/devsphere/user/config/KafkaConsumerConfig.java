@@ -39,7 +39,11 @@ public class KafkaConsumerConfig {
                 kafkaTemplate,
                 (record, exception) -> {
                     String dltTopic = record.topic() + ".DLT";
-                    meterRegistry.counter("devsphere.kafka.events.dlt.total", "event_type", "UserRegisteredEvent").increment();
+                    String eventType = "DomainEvent";
+                    if (record.headers().lastHeader("event_type") != null) {
+                        eventType = new String(record.headers().lastHeader("event_type").value());
+                    }
+                    meterRegistry.counter("devsphere.kafka.events.dlt.total", "event_type", eventType).increment();
                     log.warn("Routing message to DLT topic: {} [partition: {}, offset: {}] after retry exhaustion. Cause: {}",
                             dltTopic, record.partition(), record.offset(),
                             exception != null ? exception.getMessage() : "Unknown");
@@ -52,7 +56,11 @@ public class KafkaConsumerConfig {
 
         DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, backOff);
         errorHandler.setRetryListeners((record, ex, deliveryAttempt) -> {
-            meterRegistry.counter("devsphere.kafka.events.retry.total", "event_type", "UserRegisteredEvent").increment();
+            String eventType = "DomainEvent";
+            if (record.headers().lastHeader("event_type") != null) {
+                eventType = new String(record.headers().lastHeader("event_type").value());
+            }
+            meterRegistry.counter("devsphere.kafka.events.retry.total", "event_type", eventType).increment();
             log.warn("Kafka processing retry attempt {}/{} for topic: {}, partition: {}, offset: {}, key: {}. Error: {}",
                     deliveryAttempt, maxAttempts, record.topic(), record.partition(), record.offset(), record.key(), ex.getMessage());
         });

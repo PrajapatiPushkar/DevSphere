@@ -98,9 +98,39 @@ All domain events in DevSphere implement the `DomainEvent` contract (or extend `
 
 ---
 
-## 7. Future Kafka & Outbox Integration Boundary
+## 7. Kafka Integration & Transport (Lesson 56)
 
-Lesson 55 establishes the in-memory Spring application event and domain event foundation. In upcoming lessons:
-- **Lesson 56**: Kafka Event Streaming integration.
-- **Lesson 57**: Transactional Outbox Pattern persistence (`outbox_events`).
-- **Lesson 58**: Duplicate Event Idempotency deduplication.
+Lesson 56 integrates **Apache Kafka** into DevSphere event-driven architecture as the scalable event transport layer:
+
+```text
+Business Service (e.g. ResumeVersionService)
+       │
+       ▼
+DomainEventPublisher (interface)
+       │
+       ▼
+KafkaDomainEventPublisher (Primary Bean)
+       ├──> Local Spring ApplicationEventPublisher (in-memory listeners)
+       └──> KafkaTemplate (ProducerRecord with MDC trace headers + key)
+                 │
+                 ▼
+          Kafka Topics (devsphere.domain.events, devsphere.user.v1)
+                 │
+                 ▼
+          Kafka Consumer (ResumeVersionPublishedEventConsumer, UserRegisteredEventConsumer)
+                 │ (MDC trace restoration & contract validation)
+                 ▼
+          Application Event Listener / Handler
+```
+
+### Kafka Transport Key Design Principles:
+1. **Domain Agnosticism**: Business services call `domainEventPublisher.publish(event)` without dependency on Kafka APIs.
+2. **Stable Message Keys**: Events use entity/profile identifiers (`resumeProfileId`, `userId`) as Kafka record keys to preserve partition ordering.
+3. **Trace Propagation**: MDC `traceId` context is carried in Kafka record headers (`X-Trace-Id`) and extracted by consumers.
+4. **Dead-Letter Recovery**: Failed processing after 3 retry attempts routes records to `.DLT` topics (`devsphere.domain.events.DLT`).
+
+### Upcoming Roadmap Boundary:
+- **Lesson 57**: Transactional Outbox Pattern (`outbox_events`).
+- **Lesson 58**: Idempotency & Duplicate Event Handling.
+- **Lesson 59**: API Rate Limiting.
+- **Lesson 60**: Backend Production Hardening & Readiness.
