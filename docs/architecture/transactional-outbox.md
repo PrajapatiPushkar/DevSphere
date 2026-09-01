@@ -1,72 +1,64 @@
 # Transactional Outbox Pattern Architecture
 
-This document describes the **Transactional Outbox Pattern** implemented in **Lesson 10** for `Auth Service`.
+This document describes the Transactional Outbox Pattern implementation in DevSphere (`user-service`, `auth-service`), addressing the dual-write problem between database state transitions and Kafka message publication.
 
 ---
 
-## 1. Problem Statement (Previous Direct Publishing Flaw)
+## 1. Dual-Write Problem Context
 
-In Lesson 8, `Auth Service` attempted direct event publishing to Kafka during user registration:
+In event-driven microservice architectures, updating a database and publishing an event to a message broker (Kafka) in a single business operation introduces a fundamental consistency challenge known as the **dual-write problem**:
 
+```text
+               Business Operation (e.g. Publish Resume Version)
+                                      │
+                   ┌──────────────────┴──────────────────┐
+                   │                                     │
+                   ▼                                     ▼
+        Database Transaction                      Kafka Publish
+     (Local SQL ACID Commit)                  (Remote Network I/O)
 ```
-BEGIN TRANSACTION
-  Save User to MySQL (devsphere_auth)
-COMMIT TRANSACTION
-  ↓
-Send UserRegisteredEvent to Kafka  ◄── RISK WINDOW: If Kafka call fails or crashes here,
-                                        the user exists in MySQL but the event is lost forever!
-```
 
-This created an eventual consistency reliability gap:
-- Database commit succeeds.
-- Kafka publish fails (broker downtime, network split, client crash).
-- Downstream `User Service` never receives the registration event and fails to create a profile.
+### Failure Scenarios Solved by Transactional Outbox:
+- **Scenario A (DB Commit Fails, Kafka Succeeds)**: Remote Kafka receives an event for data that was rolled back locally, producing phantom events in downstream services.
+- **Scenario B (DB Commit Succeeds, Kafka Fails)**: Local state is saved, but network timeout / Kafka unavailability drops the event permanently, leading to inconsistent secondary state.
+- **Scenario C (Application Crash Post-DB Commit)**: Application crashes after committing SQL changes but before Kafka network call executes.
 
 ---
 
-## 2. Transactional Outbox Solution Architecture
+## 2. Target Outbox Architecture
 
-The **Transactional Outbox Pattern** eliminates this reliability gap by decoupling event creation from Kafka network transport. Event creation and business entity persistence execute within the **SAME atomic database transaction**.
+The Transactional Outbox Pattern guarantees that event creation and database updates execute inside the **exact same database transaction**:
 
-```
-Client (POST /api/v1/auth/register)
-                  │
-                  ▼
-          ┌──────────────┐
-          │ Auth Service │ (Port 8081)
-          └──────┬───────┘
-                 │
-                 ├── BEGIN DATABASE TRANSACTION
-                 │     ├── 1. Save UserCredential (users table)
-                 │     └── 2. Save OutboxEvent (outbox_events table - PENDING)
-                 └── COMMIT TRANSACTION (ATOMIC)
-                       │
-                       ▼ (HTTP 201 Created returned immediately)
-                 ┌───────────┐
-                 │ Auth DB   │ (devsphere_auth)
-                 └─────┬─────┘
-                       │
-                       ▼ (Polling @Scheduled fixedDelay=1000ms, batchSize=50)
-             ┌──────────────────┐
-             │ Outbox Publisher │
-             └─────────┬────────┘
-                       │
-                       ▼
-                 ┌───────────┐
-                 │   Kafka   │ Topic: devsphere.user.v1 (Key: userId)
-                 └─────┬─────┘
-                       │
-                       ▼ (Consumer Group: devsphere-user-service)
-                ┌──────────────┐
-                │ User Service │ (Port 8082 - Idempotent Consumer)
-                └──────────────┘
+```text
+Business Service (e.g. ResumeVersionService)
+       │
+       ▼ @Transactional
+┌───────────────────────────────────────────────────────────┐
+│ Database Transaction                                      │
+│                                                           │
+│ 1. UPDATE business tables (e.g. resume_versions)          │
+│ 2. INSERT into outbox_events table (status = PENDING)     │
+└─────────────────────────────┬─────────────────────────────┘
+                              │
+                        COMMIT (Atomic)
+                              │
+                              ▼
+┌───────────────────────────────────────────────────────────┐
+│ OutboxPublisher (@Scheduled Poller)                       │
+│                                                           │
+│ 1. SELECT * FROM outbox_events WHERE status = 'PENDING'   │
+│ 2. Transmit ProducerRecord to Kafka (with trace headers)  │
+│ 3. On ACK success: UPDATE status = 'PUBLISHED'            │
+│ 4. On Error: increment retry_count, status = 'FAILED'     │
+└─────────────────────────────┬─────────────────────────────┘
+                              │
+                              ▼
+                 Apache Kafka Topic Stream
 ```
 
 ---
 
-## 3. Outbox Table Schema & State Machine
-
-The `outbox_events` table is created in `devsphere_auth` via Flyway migration `V2__create_outbox_events.sql`:
+## 3. Database Schema Contract (`outbox_events`)
 
 ```sql
 CREATE TABLE outbox_events (
@@ -82,48 +74,49 @@ CREATE TABLE outbox_events (
     last_error TEXT,
     created_at TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     published_at TIMESTAMP(6) NULL,
-    CONSTRAINT uk_outbox_event_id UNIQUE (event_id)
+    CONSTRAINT uk_user_outbox_event_id UNIQUE (event_id)
 );
-CREATE INDEX idx_outbox_status_created ON outbox_events(status, created_at);
+
+CREATE INDEX idx_user_outbox_status_created ON outbox_events(status, created_at);
 ```
 
-### State Machine Transitions
-
-```
-  ┌─────────┐
-  │ PENDING │ ◄── Created atomically during user registration
-  └────┬────┘
-       │
-       ├─────────────────────────────────────────┐
-       │ Successful Kafka Publish                │ Publish Failure (retry_count < maxRetries)
-       ▼                                         ▼
- ┌───────────┐                            ┌───────────┐
- │ PUBLISHED │                            │  PENDING  │ (Increments retry_count & stores last_error)
- └───────────┘                            └─────┬─────┘
-                                                │
-                                                │ Publish Failure (retry_count >= maxRetries)
-                                                ▼
-                                          ┌───────────┐
-                                          │  FAILED   │ (Retained for manual operational recovery)
-                                          └───────────┘
-```
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `id` | `BIGINT` | Primary key identity |
+| `event_id` | `VARCHAR(36)` | Unique domain event UUID |
+| `aggregate_type` | `VARCHAR(50)` | Business aggregate name (`"RESUME_PROFILE"`, `"USER"`) |
+| `aggregate_id` | `VARCHAR(50)` | Business aggregate identifier (`resumeProfileId`, `userId`) used as Kafka key |
+| `event_type` | `VARCHAR(50)` | Past-tense domain event type (`"ResumeVersionPublished"`) |
+| `event_version` | `INT` | Event schema version (default `1`) |
+| `payload` | `TEXT` | Serialized JSON event payload (with `traceId` context) |
+| `status` | `VARCHAR(20)` | `PENDING`, `PUBLISHED`, or `FAILED` |
+| `retry_count` | `INT` | Incremented upon publication attempt failure |
+| `last_error` | `TEXT` | Diagnostic error message from failed publication attempts |
 
 ---
 
-## 4. Key Guarantees & Constraints
+## 4. Lifecycle & Delivery Semantics
 
-1. **Atomic DB Persistence**:
-   - `UserCredential` and `OutboxEvent` are written inside the same `@Transactional` method (`AuthService.register`).
-   - If user creation succeeds, outbox creation MUST succeed. If either fails, the entire transaction rolls back.
-2. **At-Least-Once Kafka Delivery**:
-   - Outbox publisher polls `PENDING` records in batches (default `50`).
-   - On Kafka publish acknowledgement, status updates to `PUBLISHED`.
-   - If app crashes after Kafka send but before updating DB status, the publisher will re-send the message on restart.
-3. **Consumer Idempotency**:
-   - Because at-least-once publishing can deliver duplicate events, `User Service` maintains application-level idempotency (`findByUserId`) and database constraints (`UNIQUE KEY` on `user_id`).
-4. **Credential Isolation**:
-   - Outbox `payload` contains JSON for `UserRegisteredEvent` (`eventId`, `eventType`, `eventVersion`, `occurredAt`, `userId`).
-   - Outbox payloads NEVER contain passwords, password hashes, JWT secrets, or internal DB credentials.
-5. **Kafka Downtime Resilience**:
-   - If Kafka is completely offline, user registration returns HTTP 201 Created and persists outbox events with status `PENDING`.
-   - Once Kafka recovers, `OutboxPublisher` processes pending events and delivers them to `User Service` without event loss.
+1. **Atomic Outbox Persistence**:
+   - `DomainEventPublisher` writes the `OutboxEvent` entity into `outbox_events` inside the active `@Transactional` context.
+   - If the business operation rolls back, the outbox record is rolled back automatically.
+
+2. **Asynchronous Outbox Polling**:
+   - `OutboxPublisher` runs periodically (`app.outbox.polling-interval=1000`).
+   - Fetches pending events ordered by `created_at ASC` using page batches (`app.outbox.batch-size=50`).
+
+3. **At-Least-Once Delivery & Idempotency Boundary**:
+   - Outbox publisher guarantees **at-least-once publication** to Kafka.
+   - If an application crashes after Kafka receives the record but before outbox status updates to `PUBLISHED`, the record will be re-sent upon restart.
+   - **Consumer-side deduplication** and idempotent handling belong to **Lesson 58**.
+
+4. **Retry & Error Recovery**:
+   - Transient failures (Kafka broker disconnection, network timeouts) update `retry_count` and log diagnostics while preserving the event in `PENDING` status.
+   - Once `retry_count >= maxRetries` (`app.outbox.max-retries=5`), the record transitions to `FAILED` and increments failure metrics.
+
+---
+
+## 5. Metrics & Observability
+
+- `devsphere.outbox.events.published.total` (Tags: `event_type`, `status`)
+- `devsphere.outbox.publish.failures.total` (Tags: `event_type`)

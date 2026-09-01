@@ -54,6 +54,10 @@ spring:
         enabled: false
 
 app:
+  outbox:
+    polling-interval: 1000
+    batch-size: 50
+    max-retries: 5
   kafka:
     consumer:
       max-attempts: 3
