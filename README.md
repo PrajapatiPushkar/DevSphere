@@ -122,11 +122,34 @@ CompiledResumeResponse
 - **Lesson 18**: Distributed Rate Limiting and API Protection *(Completed)*
 - **Lesson 19**: Production CI/CD Pipeline and Quality Gates *(Completed)*
 - **Lesson 20**: Container Registry and Continuous Delivery Foundation *(Completed)*
-- **Lesson 21**: Kubernetes Deployment Foundation *(Completed)*
-- **Lesson 22**: Kubernetes Ingress, TLS and External Access Foundation *(Completed)*
-- **Lesson 23**: Kubernetes Security Hardening and Network Isolation *(Completed)*
-- **Lesson 24**: Kubernetes High Availability, Autoscaling and Workload Reliability *(Completed)*
-- **Lesson 25**: Kubernetes Environment Overlays and Production Deployment Strategy *(Completed)*
+- **Lesson 55**: Event-Driven Architecture Foundation *(Completed)*
+- **Lesson 56**: Apache Kafka Integration *(Completed)*
+- **Lesson 57**: Transactional Outbox Pattern *(Completed)*
+- **Lesson 58**: Event Idempotency & Deduplication *(Completed)*
+- **Lesson 59**: Distributed API Rate Limiting & Throttling *(Completed)*
+- **Lesson 60**: Backend Production Hardening & Readiness *(Completed)*
+
+---
+
+## Production Environment Variables & Deployment Reference
+
+| Variable | Target Services | Description | Default |
+| :--- | :--- | :--- | :--- |
+| `DB_HOST` | `user-service`, `auth-service` | MySQL Database Host | `localhost` |
+| `DB_PORT` | `user-service`, `auth-service` | MySQL Database Port | `3306` |
+| `DB_NAME` | `user-service`, `auth-service` | MySQL Database Name | `devsphere_user` / `devsphere_auth` |
+| `DB_USERNAME` | `user-service`, `auth-service` | MySQL Username | `root` |
+| `DB_PASSWORD` | `user-service`, `auth-service` | MySQL Password | `""` |
+| `SPRING_REDIS_HOST` | `api-gateway`, `user-service` | Distributed Redis Host | `localhost` |
+| `SPRING_REDIS_PORT` | `api-gateway`, `user-service` | Distributed Redis Port | `6379` |
+| `KAFKA_BOOTSTRAP_SERVERS` | `user-service`, `auth-service` | Kafka Bootstrap Broker List | `localhost:9092` |
+| `JWT_SECRET` | `api-gateway`, `auth-service` | HMAC-SHA JWT Signing Key | Base64 Key |
+| `JWT_EXPIRATION_SECONDS` | `auth-service` | Access Token Validity | `3600` |
+
+### Health Probes & Monitoring
+- **Liveness Probe**: `GET /actuator/health/liveness` (Status 200 OK)
+- **Readiness Probe**: `GET /actuator/health/readiness` (Status 200 OK)
+- **Prometheus Metrics**: `GET /actuator/prometheus`
 
 ---
 

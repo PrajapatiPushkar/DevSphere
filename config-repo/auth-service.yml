@@ -1,7 +1,10 @@
 server:
   port: 8081
+  shutdown: graceful
 
 spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   application:
     name: DEVSPHERE-AUTH-SERVICE
 
@@ -44,6 +47,11 @@ app:
     max-retries: 5
 
 management:
+  endpoint:
+    health:
+      show-details: when_authorized
+      probes:
+        enabled: true
   opentelemetry:
     resource-attributes:
       service.name: devsphere-auth-service

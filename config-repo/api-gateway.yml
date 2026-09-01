@@ -1,7 +1,10 @@
 server:
   port: 8080
+  shutdown: graceful
 
 spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   application:
     name: DEVSPHERE-API-GATEWAY
 
@@ -105,6 +108,11 @@ app:
       burst-capacity: 20
 
 management:
+  endpoint:
+    health:
+      show-details: when_authorized
+      probes:
+        enabled: true
   health:
     redis:
       enabled: false
