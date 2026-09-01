@@ -1,5 +1,7 @@
 package com.devsphere.user.event;
 
+import com.devsphere.user.idempotency.EventIdempotencyService;
+import com.devsphere.user.idempotency.EventProcessingResult;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.micrometer.tracing.ScopedSpan;
@@ -22,23 +24,27 @@ public class ResumeVersionPublishedEventConsumer {
     private final MeterRegistry meterRegistry;
     private final Tracer tracer;
     private final ResumeActivityEventListener resumeActivityEventListener;
+    private final EventIdempotencyService idempotencyService;
 
     public ResumeVersionPublishedEventConsumer() {
-        this(new SimpleMeterRegistry(), null, null);
+        this(new SimpleMeterRegistry(), null, null, null);
     }
 
     public ResumeVersionPublishedEventConsumer(MeterRegistry meterRegistry,
-                                               ResumeActivityEventListener resumeActivityEventListener) {
-        this(meterRegistry, null, resumeActivityEventListener);
+                                               ResumeActivityEventListener resumeActivityEventListener,
+                                               EventIdempotencyService idempotencyService) {
+        this(meterRegistry, null, resumeActivityEventListener, idempotencyService);
     }
 
     @Autowired(required = false)
     public ResumeVersionPublishedEventConsumer(MeterRegistry meterRegistry,
                                                Tracer tracer,
-                                               ResumeActivityEventListener resumeActivityEventListener) {
+                                               ResumeActivityEventListener resumeActivityEventListener,
+                                               EventIdempotencyService idempotencyService) {
         this.meterRegistry = meterRegistry != null ? meterRegistry : new SimpleMeterRegistry();
         this.tracer = tracer;
         this.resumeActivityEventListener = resumeActivityEventListener;
+        this.idempotencyService = idempotencyService;
     }
 
     @KafkaListener(topics = DOMAIN_EVENTS_TOPIC, groupId = RESUME_ACTIVITY_GROUP_ID)
@@ -78,7 +84,25 @@ public class ResumeVersionPublishedEventConsumer {
                 throw new IllegalArgumentException("Invalid or unsupported ResumeVersionPublishedEvent payload");
             }
 
-            if (resumeActivityEventListener != null) {
+            if (idempotencyService != null) {
+                EventProcessingResult<Void> result = idempotencyService.executeIdempotent(
+                        event.getEventId(),
+                        event.getEventType(),
+                        RESUME_ACTIVITY_GROUP_ID,
+                        () -> {
+                            if (resumeActivityEventListener != null) {
+                                resumeActivityEventListener.onResumeVersionPublished(event);
+                            }
+                            return null;
+                        }
+                );
+
+                if (result.isDuplicate()) {
+                    log.info("Safely ignored duplicate ResumeVersionPublishedEvent [eventId={}] for consumerGroup={}",
+                            event.getEventId(), RESUME_ACTIVITY_GROUP_ID);
+                    return;
+                }
+            } else if (resumeActivityEventListener != null) {
                 resumeActivityEventListener.onResumeVersionPublished(event);
             }
 

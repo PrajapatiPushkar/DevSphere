@@ -112,13 +112,12 @@ class UserRegisteredEventConsumerTest {
         );
 
         when(processedEventRepository.existsByEventId(eventId)).thenReturn(false);
-        when(userProfileRepository.findByUserId(userId)).thenReturn(Optional.empty());
         when(processedEventRepository.saveAndFlush(any(ProcessedEvent.class)))
                 .thenThrow(new DataIntegrityViolationException("Duplicate entry for key uk_processed_events_event_id"));
 
         consumer.consumeUserRegisteredEvent(event);
 
-        verify(userProfileRepository).save(any(UserProfile.class));
+        verify(userProfileRepository, never()).save(any());
         verify(processedEventRepository).saveAndFlush(any(ProcessedEvent.class));
     }
 
