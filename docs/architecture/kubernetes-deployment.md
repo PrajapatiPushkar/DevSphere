@@ -1,28 +1,32 @@
-# Kubernetes Deployment Architecture — Lesson 61
+# Kubernetes Deployment Architecture — Lesson 62
 
 ## 1. Overview & Kubernetes Role in DevSphere
 
-Kubernetes serves as the production container orchestration platform for the **DevSphere** microservices platform (`api-gateway`, `auth-service`, `user-service`).
+Kubernetes serves as the production container orchestration platform for the entire **DevSphere** microservices platform (`api-gateway`, `auth-service`, `user-service`, `service-discovery`, `config-server`).
 
-The production architecture exposes the system to clients via a Kubernetes Ingress Controller, which routes perimeter traffic directly into the API Gateway. Internal microservices communicate securely over internal Kubernetes ClusterIP DNS endpoints.
+The production architecture exposes the system to clients via a Kubernetes Ingress Controller, which routes perimeter traffic directly into the API Gateway. Internal microservices register with Eureka Service Discovery, retrieve centralized configuration from Config Server, and communicate over internal Kubernetes ClusterIP DNS endpoints.
 
 ```text
-                    Internet / Client
-                           |
-                           v
-                    Kubernetes Ingress (api.devsphere.local)
-                           |
-                           v
-                    API Gateway (Port 8080)
-                           |
-             +-------------+-------------+
-             |                           |
-             v                           v
-        auth-service (8081)        user-service (8082)
-             |                           |
-             +-------------+-------------+
-                           |
-                  MySQL / Redis / Kafka
+                         Client / Internet
+                                 │
+                                 ▼
+                         Kubernetes Ingress (api.devsphere.local)
+                                 │
+                                 ▼
+                            API Gateway (8080)
+                              /       \
+                             /         \
+                            ▼           ▼
+                     Auth Service    User Service
+                     (Port 8081)     (Port 8082)
+                           |              |
+                           +------+-------+
+                                  │
+                           Service Discovery (Eureka: 8761)
+                           /      |       \
+                          /       |        \
+                       Redis    Kafka    Config Server (8888)
+                      (6379)   (9092)
 ```
 
 ---
@@ -46,10 +50,12 @@ Using a dedicated `devsphere` namespace ensures multi-tenant isolation, precise 
 
 ---
 
-## 3. Deployment Configuration & Microservice Lifecycle
+## 3. Deployment Matrix & Microservice Lifecycles
 
 Application microservices are deployed as Kubernetes `Deployment` resources:
 
+- `config-server` (1 replica, port 8888)
+- `service-discovery` (1 replica, port 8761)
 - `api-gateway` (2 replicas, port 8080)
 - `auth-service` (2 replicas, port 8081)
 - `user-service` (2 replicas, port 8082)
@@ -65,17 +71,17 @@ strategy:
     maxSurge: 1
 ```
 
-`maxUnavailable: 0` guarantees that existing operational pods are never terminated before new replacement pods pass readiness health checks.
-
 ### Graceful Termination
 Containers specify `terminationGracePeriodSeconds: 30`. When `SIGTERM` is emitted, Spring Boot graceful shutdown (`server.shutdown: graceful`) drains in-flight HTTP requests and completes active Transactional Outbox batches before process exit.
 
 ---
 
-## 4. Kubernetes Services & Internal DNS Discovery
+## 4. Service Discovery & Internal DNS Networking
 
-Internal service-to-service communication relies on Kubernetes DNS rather than hardcoded IPs or host discovery servers:
+Internal service-to-service communication relies on Kubernetes DNS and Eureka Service Discovery:
 
+- Config Server: `http://devsphere-config-server.devsphere.svc.cluster.local:8888`
+- Service Discovery (Eureka): `http://devsphere-service-discovery.devsphere.svc.cluster.local:8761/eureka/`
 - API Gateway: `http://api-gateway.devsphere.svc.cluster.local:8080`
 - Auth Service: `http://auth-service.devsphere.svc.cluster.local:8081`
 - User Service: `http://user-service.devsphere.svc.cluster.local:8082`
@@ -111,50 +117,22 @@ Sensitive parameters (`MYSQL_PASSWORD`, `SPRING_REDIS_PASSWORD`, `JWT_SECRET`, `
 
 ---
 
-## 6. Infrastructure Foundation (Local / Dev Kubernetes)
+## 6. Local Development Infrastructure Pods
 
 For local development and testing in Kubernetes (e.g. Minikube / Kind / Docker Desktop), manifest foundations are provided under `k8s/infrastructure/`:
 
-- **MySQL (`k8s/infrastructure/mysql.yaml`)**:
-  - PersistentVolumeClaim (`mysql-pv-claim`, 1Gi)
-  - Deployment (1 replica, `mysql:8.0`, TCP liveness/readiness probes on port 3306)
-  - ClusterIP Service (`devsphere-mysql:3306`)
-  - *Production Note*: Production MySQL must be hosted on external managed infrastructure (AWS RDS, GCP Cloud SQL) rather than an in-cluster single pod.
-- **Redis (`k8s/infrastructure/redis.yaml`)**:
-  - Deployment (1 replica, `redis:7-alpine`, TCP probes on 6379)
-  - ClusterIP Service (`devsphere-redis:6379`)
-  - *Production Note*: Production Redis should utilize managed Redis or ElastiCache with multi-AZ replication.
-- **Kafka (`k8s/infrastructure/kafka.yaml`)**:
-  - Zookeeper Deployment + Service (`devsphere-zookeeper:2181`)
-  - Kafka Broker Deployment + Service (`devsphere-kafka:9092`) with `KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://devsphere-kafka.devsphere.svc.cluster.local:9092`
-  - Preserves existing topic names, Transactional Outbox pattern, and consumer groups (`devsphere-user-service`, `devsphere-resume-activity-group`).
+- **MySQL (`k8s/infrastructure/mysql.yaml`)**: PersistentVolumeClaim (`mysql-pv-claim`, 1Gi), Deployment (`mysql:8.0`), ClusterIP Service (`3306`).
+- **Redis (`k8s/infrastructure/redis.yaml`)**: Deployment (`redis:7-alpine`), ClusterIP Service (`6379`).
+- **Kafka & Zookeeper (`k8s/infrastructure/kafka.yaml`)**: Zookeeper Deployment/Service (`2181`) and Kafka Broker Deployment/Service (`9092`) with `PLAINTEXT://devsphere-kafka.devsphere.svc.cluster.local:9092`.
 
 ---
 
 ## 7. Autoscaling Foundation (HPA)
 
-HorizontalPodAutoscalers (`autoscaling/v2`) are defined under `k8s/autoscaling/hpa.yaml`:
-
-```yaml
-spec:
-  scaleTargetRef:
-    apiVersion: apps/v1
-    kind: Deployment
-    name: api-gateway
-  minReplicas: 2
-  maxReplicas: 10
-  metrics:
-    - type: Resource
-      resource:
-        name: cpu
-        target:
-          type: Utilization
-          averageUtilization: 70
-```
-
+HorizontalPodAutoscalers (`autoscaling/v2`) defined in `k8s/autoscaling/hpa.yaml`:
 - Targets: `api-gateway`, `auth-service`, `user-service`.
-- Metric: CPU average utilization threshold (70%).
-- *Dependency Note*: HPA requires `metrics-server` to be deployed in the Kubernetes cluster to collect real-time container CPU metrics.
+- Replicas: min `2`, max `10`.
+- Metric: CPU average utilization threshold of `70%`.
 
 ---
 
@@ -164,35 +142,18 @@ Containers utilize Spring Boot Actuator endpoints for health monitoring:
 
 | Probe Type | Actuator Endpoint | Purpose |
 | :--- | :--- | :--- |
-| **Startup Probe** | `/actuator/health/liveness` | Protects initial Spring Boot JVM context startup from premature restarts (initial delay 15s, 20 retries). |
+| **Startup Probe** | `/actuator/health/liveness` | Protects initial Spring Boot JVM context startup from premature restarts. |
 | **Liveness Probe** | `/actuator/health/liveness` | Monitors container process responsiveness. Restarts unresponsive containers. |
 | **Readiness Probe** | `/actuator/health/readiness` | Controls traffic routing. Removes unhealthy pods from Service endpoint rotators. |
 
 ---
 
-## 9. Resource Allocation & Security Hardening
+## 9. Security & Hardening
 
-### Resource Requests & Limits
-```yaml
-resources:
-  requests:
-    cpu: "250m"
-    memory: "512Mi"
-  limits:
-    cpu: "1000m"
-    memory: "1Gi"
-```
-Container JVM heap limits are dynamically aligned via `JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75.0"`.
-
-### Security Context
-Pods run with non-root container isolation:
-- `runAsNonRoot: true`
-- `runAsUser: 10001`
-- `runAsGroup: 10001`
-- `allowPrivilegeEscalation: false`
-- `readOnlyRootFilesystem: true` with ephemeral `/tmp` `emptyDir`
-- `capabilities.drop: [ALL]`
-- `automountServiceAccountToken: false`
+- **Non-root user execution**: UID/GID `10001` (`USER devsphere`).
+- **Read-only root filesystem**: `readOnlyRootFilesystem: true` with ephemeral `/tmp` `emptyDir`.
+- **Capability dropping**: `capabilities.drop: [ALL]` and `allowPrivilegeEscalation: false`.
+- **Token mounting**: `automountServiceAccountToken: false`.
 
 ---
 
@@ -217,7 +178,7 @@ spec:
 
 ---
 
-## 11. Verification & Dry-Run Operations
+## 11. Verification & Synthesis
 
 Synthesize and validate all manifests statically using `kubectl`:
 

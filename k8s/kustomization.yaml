@@ -10,6 +10,8 @@ resources:
   - infrastructure/mysql.yaml
   - infrastructure/redis.yaml
   - infrastructure/kafka.yaml
+  - services/config-server.yaml
+  - services/service-discovery.yaml
   - services/api-gateway.yaml
   - services/auth-service.yaml
   - services/user-service.yaml
