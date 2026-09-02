@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: loadbalancer-api-gateway
+  namespace: devsphere
+  labels:
+    app.kubernetes.io/name: loadbalancer-api-gateway
+    app.kubernetes.io/component: gateway
+    app.kubernetes.io/part-of: devsphere
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http
+  selector:
+    app.kubernetes.io/name: api-gateway

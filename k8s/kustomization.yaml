@@ -16,4 +16,6 @@ resources:
   - services/auth-service.yaml
   - services/user-service.yaml
   - autoscaling/hpa.yaml
+  - networking/nodeport-gateway.yaml
+  - networking/loadbalancer-gateway.yaml
   - ingress/ingress.yaml
