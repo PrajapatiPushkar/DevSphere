@@ -48,7 +48,7 @@ class UserRegisteredEventConsumerTest {
                 userId
         );
 
-        when(processedEventRepository.existsByEventId(eventId)).thenReturn(false);
+        when(processedEventRepository.existsByEventIdAndConsumerGroup(eventId, "devsphere-user-service")).thenReturn(false);
         when(userProfileRepository.findByUserId(userId)).thenReturn(Optional.empty());
 
         consumer.consumeUserRegisteredEvent(event);
@@ -69,7 +69,7 @@ class UserRegisteredEventConsumerTest {
                 userId
         );
 
-        when(processedEventRepository.existsByEventId(eventId)).thenReturn(true);
+        when(processedEventRepository.existsByEventIdAndConsumerGroup(eventId, "devsphere-user-service")).thenReturn(true);
 
         consumer.consumeUserRegisteredEvent(duplicateEvent);
 
@@ -90,7 +90,7 @@ class UserRegisteredEventConsumerTest {
                 userId
         );
 
-        when(processedEventRepository.existsByEventId(eventId)).thenReturn(false);
+        when(processedEventRepository.existsByEventIdAndConsumerGroup(eventId, "devsphere-user-service")).thenReturn(false);
         when(userProfileRepository.findByUserId(userId)).thenReturn(Optional.of(new UserProfile(userId)));
 
         consumer.consumeUserRegisteredEvent(event);
@@ -111,7 +111,7 @@ class UserRegisteredEventConsumerTest {
                 userId
         );
 
-        when(processedEventRepository.existsByEventId(eventId)).thenReturn(false);
+        when(processedEventRepository.existsByEventIdAndConsumerGroup(eventId, "devsphere-user-service")).thenReturn(false);
         when(processedEventRepository.saveAndFlush(any(ProcessedEvent.class)))
                 .thenThrow(new DataIntegrityViolationException("Duplicate entry for key uk_processed_events_event_id"));
 

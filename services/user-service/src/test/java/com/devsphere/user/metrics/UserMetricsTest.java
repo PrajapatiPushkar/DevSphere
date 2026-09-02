@@ -41,7 +41,7 @@ class UserMetricsTest {
     void consumeEvent_IncrementsProcessedAndProfileCreatedMetrics() {
         UserRegisteredEvent event = new UserRegisteredEvent("evt-100", "USER_REGISTERED", 1, Instant.now(), 101L);
 
-        when(processedEventRepository.existsByEventId("evt-100")).thenReturn(false);
+        when(processedEventRepository.existsByEventIdAndConsumerGroup(anyString(), anyString())).thenReturn(false);
         when(userProfileRepository.findByUserId(101L)).thenReturn(Optional.empty());
 
         consumer.consumeUserRegisteredEvent(event);
@@ -57,7 +57,7 @@ class UserMetricsTest {
     void consumeDuplicateEvent_IncrementsDuplicateMetric() {
         UserRegisteredEvent event = new UserRegisteredEvent("evt-duplicate", "USER_REGISTERED", 1, Instant.now(), 101L);
 
-        when(processedEventRepository.existsByEventId("evt-duplicate")).thenReturn(true);
+        when(processedEventRepository.existsByEventIdAndConsumerGroup(anyString(), anyString())).thenReturn(true);
 
         consumer.consumeUserRegisteredEvent(event);
 

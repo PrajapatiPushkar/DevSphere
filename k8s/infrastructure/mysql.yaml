@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pv-claim
+  namespace: devsphere
+  labels:
+    app.kubernetes.io/name: devsphere-mysql
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: devsphere
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devsphere-mysql
+  namespace: devsphere
+  labels:
+    app.kubernetes.io/name: devsphere-mysql
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: devsphere
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: devsphere-mysql
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: devsphere-mysql
+        app.kubernetes.io/component: database
+        app.kubernetes.io/part-of: devsphere
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+              name: mysql
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: devsphere-secrets
+                  key: MYSQL_PASSWORD
+                  optional: true
+            - name: MYSQL_DATABASE
+              value: devsphere
+            - name: MYSQL_USER
+              value: devsphere
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: devsphere-secrets
+                  key: MYSQL_PASSWORD
+                  optional: true
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          volumeMounts:
+            - name: mysql-persistent-storage
+              mountPath: /var/lib/mysql
+          livenessProbe:
+            tcpSocket:
+              port: 3306
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 3306
+            initialDelaySeconds: 10
+            periodSeconds: 5
+      volumes:
+        - name: mysql-persistent-storage
+          persistentVolumeClaim:
+            claimName: mysql-pv-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: devsphere-mysql
+  namespace: devsphere
+  labels:
+    app.kubernetes.io/name: devsphere-mysql
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: devsphere
+spec:
+  type: ClusterIP
+  ports:
+    - port: 3306
+      targetPort: 3306
+      protocol: TCP
+      name: mysql
+  selector:
+    app.kubernetes.io/name: devsphere-mysql

@@ -38,7 +38,7 @@ public class EventIdempotencyService {
         }
         String group = consumerGroup != null && !consumerGroup.isBlank() ? consumerGroup : "default";
         return processedEventRepository.existsByEventIdAndConsumerGroup(eventId, group)
-                || processedEventRepository.existsByEventId(eventId);
+                || (!"default".equals(group) && processedEventRepository.existsByEventIdAndConsumerGroup(eventId, "default"));
     }
 
     @Transactional
@@ -55,9 +55,9 @@ public class EventIdempotencyService {
         String group = consumerGroup != null && !consumerGroup.isBlank() ? consumerGroup : "default";
         String type = eventType != null ? eventType : "Unknown";
 
-        // 1. Check if already processed by this consumer group or legacy event_id
+        // 1. Check if already processed by this consumer group or legacy default group
         if (processedEventRepository.existsByEventIdAndConsumerGroup(eventId, group)
-                || processedEventRepository.existsByEventId(eventId)) {
+                || (!"default".equals(group) && processedEventRepository.existsByEventIdAndConsumerGroup(eventId, "default"))) {
             log.info("Event already processed for eventId: {}, consumerGroup: {}. Skipping business processing.", eventId, group);
             meterRegistry.counter("devsphere.events.idempotency.total", "event_type", type, "result", "duplicate").increment();
             return EventProcessingResult.duplicate();

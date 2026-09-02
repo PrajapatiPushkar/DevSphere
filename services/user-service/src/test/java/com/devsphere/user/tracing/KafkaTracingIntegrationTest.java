@@ -59,7 +59,7 @@ class KafkaTracingIntegrationTest {
                 300L
         );
 
-        when(processedEventRepository.existsByEventId("evt-trace-101")).thenReturn(false);
+        when(processedEventRepository.existsByEventIdAndConsumerGroup(anyString(), anyString())).thenReturn(false);
         when(userProfileRepository.findByUserId(300L)).thenReturn(Optional.empty());
 
         consumer.consumeUserRegisteredEvent(event);
@@ -84,7 +84,7 @@ class KafkaTracingIntegrationTest {
                 300L
         );
 
-        when(processedEventRepository.existsByEventId("evt-trace-dup-101")).thenReturn(true);
+        when(processedEventRepository.existsByEventIdAndConsumerGroup(anyString(), anyString())).thenReturn(true);
 
         consumer.consumeUserRegisteredEvent(event);
 
