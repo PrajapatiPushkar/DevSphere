@@ -10,6 +10,7 @@ data:
   SPRING_PROFILES_ACTIVE: "prod"
   CONFIG_SERVER_URL: "http://devsphere-config-server.devsphere.svc.cluster.local:8888"
   EUREKA_SERVER_URL: "http://devsphere-service-discovery.devsphere.svc.cluster.local:8761/eureka"
+  EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: "http://devsphere-service-discovery.devsphere.svc.cluster.local:8761/eureka/"
   SPRING_REDIS_HOST: "devsphere-redis"
   SPRING_REDIS_PORT: "6379"
   SPRING_KAFKA_BOOTSTRAP_SERVERS: "devsphere-kafka:9092"
