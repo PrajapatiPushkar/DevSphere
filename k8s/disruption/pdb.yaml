@@ -1,0 +1,44 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-gateway-pdb
+  namespace: devsphere
+  labels:
+    app.kubernetes.io/name: api-gateway-pdb
+    app.kubernetes.io/component: gateway
+    app.kubernetes.io/part-of: devsphere
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: api-gateway
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: auth-service-pdb
+  namespace: devsphere
+  labels:
+    app.kubernetes.io/name: auth-service-pdb
+    app.kubernetes.io/component: auth-service
+    app.kubernetes.io/part-of: devsphere
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: auth-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: user-service-pdb
+  namespace: devsphere
+  labels:
+    app.kubernetes.io/name: user-service-pdb
+    app.kubernetes.io/component: user-service
+    app.kubernetes.io/part-of: devsphere
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: user-service
