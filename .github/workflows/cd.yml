@@ -1,4 +1,4 @@
-name: DevSphere Container Delivery Pipeline
+name: DevSphere Container Delivery & Deployment Pipeline
 
 on:
   push:
@@ -6,6 +6,11 @@ on:
       - main
     tags:
       - 'v*'
+  workflow_run:
+    workflows: ["DevSphere Production CI/CD Pipeline"]
+    branches: [main]
+    types:
+      - completed
 
 permissions:
   contents: read
@@ -148,3 +153,65 @@ jobs:
           name: release-manifest-${{ github.sha }}
           path: artifacts/release-manifest.json
           retention-days: 30
+
+  deploy-to-kubernetes:
+    name: Continuous Deployment to Kubernetes
+    runs-on: ubuntu-latest
+    needs: [publish-container-images, generate-release-manifest]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Kustomize CLI
+        uses: imranismail/setup-kustomize@v2
+
+      - name: Lowercase Repository Owner
+        id: repo_info
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "owner=${OWNER}" >> $GITHUB_OUTPUT
+
+      - name: Configure Kustomize Image Overrides
+        run: |
+          cd k8s
+          OWNER="${{ steps.repo_info.outputs.owner }}"
+          COMMIT_SHA="${{ github.sha }}"
+          
+          echo "Setting Kustomize image overrides to immutable commit SHA tag: ${COMMIT_SHA}"
+          kustomize edit set image ghcr.io/prajapatipushkar/devsphere-api-gateway=ghcr.io/${OWNER}/devsphere-api-gateway:${COMMIT_SHA}
+          kustomize edit set image ghcr.io/prajapatipushkar/devsphere-auth-service=ghcr.io/${OWNER}/devsphere-auth-service:${COMMIT_SHA}
+          kustomize edit set image ghcr.io/prajapatipushkar/devsphere-user-service=ghcr.io/${OWNER}/devsphere-user-service:${COMMIT_SHA}
+          kustomize edit set image ghcr.io/prajapatipushkar/devsphere-config-server=ghcr.io/${OWNER}/devsphere-config-server:${COMMIT_SHA}
+          kustomize edit set image ghcr.io/prajapatipushkar/devsphere-service-discovery=ghcr.io/${OWNER}/devsphere-service-discovery:${COMMIT_SHA}
+
+      - name: Validate Synthesized Manifests
+        run: |
+          echo "Validating Kustomize synthesized deployment manifests..."
+          kubectl kustomize k8s/
+
+      - name: Deploy to Kubernetes Cluster & Verify Rollout
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+        run: |
+          if [ -z "$KUBE_CONFIG" ]; then
+            echo "NOTICE: 'KUBE_CONFIG' secret is not configured in repository secrets."
+            echo "PASSED: Kustomize manifests synthesized and validated cleanly."
+            echo "To enable live deployment, add encoded kubeconfig to 'KUBE_CONFIG' GitHub Secret."
+            exit 0
+          fi
+
+          echo "Configuring Kubernetes credentials from secrets.KUBE_CONFIG..."
+          mkdir -p ~/.kube
+          echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config || echo "$KUBE_CONFIG" > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+          echo "Applying Kubernetes manifests via Kustomize..."
+          kubectl apply -k k8s/
+
+          echo "Verifying rolling deployment status across all microservices..."
+          kubectl rollout status deployment/config-server -n devsphere --timeout=180s
+          kubectl rollout status deployment/service-discovery -n devsphere --timeout=180s
+          kubectl rollout status deployment/auth-service -n devsphere --timeout=180s
+          kubectl rollout status deployment/user-service -n devsphere --timeout=180s
+          kubectl rollout status deployment/api-gateway -n devsphere --timeout=180s
+          echo "PASSED: All microservices successfully deployed and verified!"
