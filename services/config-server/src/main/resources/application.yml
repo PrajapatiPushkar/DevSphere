@@ -1,9 +1,12 @@
 server:
   port: 8888
+  shutdown: graceful
 
 spring:
   application:
     name: config-server
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
   cloud:
     config:
       server:
@@ -24,3 +27,10 @@ management:
   endpoint:
     health:
       show-details: always
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
+    probes:
+      enabled: true

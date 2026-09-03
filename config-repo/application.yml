@@ -1,3 +1,6 @@
+server:
+  shutdown: graceful
+
 eureka:
   client:
     service-url:
@@ -6,6 +9,8 @@ eureka:
     prefer-ip-address: true
 
 spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
   kafka:
     bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
