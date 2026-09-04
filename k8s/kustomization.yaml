@@ -20,3 +20,6 @@ resources:
   - networking/nodeport-gateway.yaml
   - networking/loadbalancer-gateway.yaml
   - ingress/ingress.yaml
+  - observability/alerts.yaml
+  - observability/prometheus.yaml
+  - observability/grafana.yaml

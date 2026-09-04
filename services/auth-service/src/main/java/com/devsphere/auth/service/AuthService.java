@@ -80,6 +80,7 @@ public class AuthService {
             outboxService.saveUserRegisteredOutboxEvent(savedCredential.getId());
 
             meterRegistry.counter("devsphere.auth.registration.total", "status", "success").increment();
+            meterRegistry.counter("devsphere_authentication_attempts_total", "type", "registration", "status", "success").increment();
 
             return new RegisterResponse(
                     savedCredential.getId(),
@@ -91,6 +92,7 @@ public class AuthService {
                 span.error(e);
             }
             meterRegistry.counter("devsphere.auth.registration.total", "status", "failure").increment();
+            meterRegistry.counter("devsphere_authentication_attempts_total", "type", "registration", "status", "failure").increment();
             throw e;
         } finally {
             if (span != null) {
@@ -117,12 +119,14 @@ public class AuthService {
 
             String token = jwtService.generateToken(credential.getId(), credential.getEmail(), credential.getRole());
             meterRegistry.counter("devsphere.auth.login.total", "status", "success").increment();
+            meterRegistry.counter("devsphere_authentication_attempts_total", "type", "login", "status", "success").increment();
             return new LoginResponse(token, jwtService.getExpirationSeconds());
         } catch (Exception e) {
             if (span != null) {
                 span.error(e);
             }
             meterRegistry.counter("devsphere.auth.login.total", "status", "failure").increment();
+            meterRegistry.counter("devsphere_authentication_attempts_total", "type", "login", "status", "failure").increment();
             throw e;
         } finally {
             if (span != null) {

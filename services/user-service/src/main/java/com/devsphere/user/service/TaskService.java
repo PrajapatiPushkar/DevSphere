@@ -67,6 +67,7 @@ public class TaskService {
 
         Task saved = taskRepository.save(task);
         meterRegistry.counter("devsphere_tasks_created_total", "priority", request.getPriority().name()).increment();
+        meterRegistry.counter("devsphere_task_operations_total", "operation", "create").increment();
 
         return new TaskResponse(saved);
     }
@@ -113,6 +114,7 @@ public class TaskService {
         task.setGoalId(request.getGoalId());
 
         Task updated = taskRepository.save(task);
+        meterRegistry.counter("devsphere_task_operations_total", "operation", "update").increment();
         return new TaskResponse(updated);
     }
 
@@ -151,6 +153,7 @@ public class TaskService {
         task.setCompletedAt(Instant.now());
         Task updated = taskRepository.save(task);
         meterRegistry.counter("devsphere_tasks_completed_total").increment();
+        meterRegistry.counter("devsphere_task_operations_total", "operation", "complete").increment();
         return new TaskResponse(updated);
     }
 
@@ -167,6 +170,7 @@ public class TaskService {
         task.setCompletedAt(null);
         Task updated = taskRepository.save(task);
         meterRegistry.counter("devsphere_tasks_reopened_total").increment();
+        meterRegistry.counter("devsphere_task_operations_total", "operation", "reopen").increment();
         return new TaskResponse(updated);
     }
 
@@ -190,6 +194,7 @@ public class TaskService {
         task.setStatus(TaskStatus.CANCELLED);
         Task updated = taskRepository.save(task);
         meterRegistry.counter("devsphere_tasks_cancelled_total").increment();
+        meterRegistry.counter("devsphere_task_operations_total", "operation", "cancel").increment();
         return new TaskResponse(updated);
     }
 

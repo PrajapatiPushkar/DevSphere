@@ -1,0 +1,94 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-alert-rules
+  namespace: devsphere
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/component: observability
+    app.kubernetes.io/part-of: devsphere
+data:
+  alerts.yml: |
+    groups:
+      - name: devsphere_alerts
+        rules:
+          - alert: ServiceUnavailable
+            expr: up{job=~"api-gateway|auth-service|user-service|config-server|service-discovery"} == 0
+            for: 1m
+            labels:
+              severity: critical
+            annotations:
+              summary: "DevSphere Microservice Unavailable"
+              description: "Service {{ $labels.job }} target {{ $labels.instance }} is down."
+
+          - alert: HighErrorRate
+            expr: sum(rate(http_server_requests_seconds_count{status=~"5.."}[5m])) by (job) / sum(rate(http_server_requests_seconds_count[5m])) by (job) > 0.05
+            for: 5m
+            labels:
+              severity: critical
+            annotations:
+              summary: "High API HTTP 5xx Error Rate"
+              description: "Service {{ $labels.job }} HTTP 5xx error rate exceeded 5% over the last 5 minutes."
+
+          - alert: HighLatency
+            expr: histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le, job)) > 2.0
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High Request Latency"
+              description: "Service {{ $labels.job }} P95 latency is over 2 seconds over the last 5 minutes."
+
+          - alert: HighCpuUsage
+            expr: process_cpu_usage > 0.85
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High CPU Utilization"
+              description: "Service {{ $labels.job }} process CPU usage is above 85%."
+
+          - alert: HighMemoryUsage
+            expr: jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} > 0.85
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High JVM Memory Utilization"
+              description: "Service {{ $labels.job }} heap memory usage is above 85%."
+
+          - alert: PodRestartCount
+            expr: increase(kube_pod_container_status_restarts_total[15m]) > 3
+            for: 1m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Frequent Pod Restarts"
+              description: "Pod {{ $labels.pod }} restarted more than 3 times in 15 minutes."
+
+          - alert: JvmHeapHigh
+            expr: jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} > 0.90
+            for: 3m
+            labels:
+              severity: critical
+            annotations:
+              summary: "JVM Heap Memory Dangerously High"
+              description: "Service {{ $labels.job }} JVM heap memory usage exceeded 90%."
+
+          - alert: KafkaConsumerLag
+            expr: kafka_consumer_fetch_manager_records_lag > 100 or sum(rate(devsphere_kafka_duplicate_events_total[5m])) > 10
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Kafka Consumer Lag or Event Error Rate High"
+              description: "Service {{ $labels.job }} has elevated consumer lag or high event processing error rates."
+
+          - alert: RedisConnectionFailure
+            expr: sum(rate(devsphere_cache_misses_total[5m])) by (job) > 500 or (up{job="redis"} == 0)
+            for: 3m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Redis Connectivity or Cache Performance Degradation"
+              description: "Service {{ $labels.job }} is experiencing cache misses surge or Redis connection failures."
