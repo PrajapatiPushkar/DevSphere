@@ -1,38 +1,97 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
+import { authService } from '../services/authService';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '../components/ui/Card';
 import { Input } from '../components/ui/Input';
 import { Button } from '../components/ui/Button';
-import { Checkbox } from '../components/ui/Checkbox';
-import { Terminal, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Alert } from '../components/common/Alert';
+import { Terminal, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { ApiError } from '../types';
 
 export const LoginPage: React.FC = () => {
-  const [email, setEmail] = useState('engineer@devsphere.io');
-  const [password, setPassword] = useState('Password123!');
-  const [rememberMe, setRememberMe] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
 
-  const { login } = useAuth();
+  const { isAuthenticated, login } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const from = (location.state as { from?: { pathname?: string } })?.from?.pathname || '/dashboard';
+
+  // Redirect authenticated user if already logged in
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
+
+  const validate = (): boolean => {
+    const errors: { email?: string; password?: string } = {};
+
+    if (!email.trim()) {
+      errors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      errors.email = 'Must be a valid email address';
+    }
+
+    if (!password) {
+      errors.password = 'Password is required';
+    } else if (password.length < 8) {
+      errors.password = 'Password must be at least 8 characters';
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormError(null);
+
+    if (!validate()) return;
+
     setIsLoading(true);
 
-    setTimeout(() => {
-      login('devsphere-sample-jwt-token', {
-        id: 101,
-        email,
-        displayName: 'Pushkar Prajapati',
-        role: 'SOFTWARE_ENGINEER',
-      });
+    try {
+      // 1. Authenticate with auth-service
+      const loginRes = await authService.login({ email: email.trim(), password });
+      
+      // Store token in localStorage for subsequent requests
+      localStorage.setItem('devsphere_token', loginRes.accessToken);
+
+      // 2. Fetch current user profile from user-service
+      let currentUser;
+      try {
+        currentUser = await authService.getCurrentUser();
+      } catch {
+        // Fallback user state if user-service is expanding
+        currentUser = {
+          id: 1,
+          email: email.trim(),
+          displayName: email.split('@')[0],
+          role: 'USER',
+        };
+      }
+
+      // Update global AuthContext state
+      login(loginRes.accessToken, currentUser);
+      showToast('Signed in successfully!', 'success', 'Welcome');
+      navigate(from, { replace: true });
+    } catch (err) {
+      const apiErr = err as ApiError;
+      const errorMessage = apiErr.message || 'Invalid email or password';
+      setFormError(errorMessage);
+      showToast(errorMessage, 'error', 'Authentication Failed');
+    } finally {
       setIsLoading(false);
-      showToast('Welcome back to DevSphere Console', 'success', 'Authenticated');
-      navigate('/dashboard');
-    }, 800);
+    }
   };
 
   return (
@@ -51,49 +110,80 @@ export const LoginPage: React.FC = () => {
       {/* Auth Card */}
       <Card glass className="max-w-md w-full border border-slate-800">
         <CardHeader>
-          <CardTitle className="text-xl">Sign in to DevSphere</CardTitle>
-          <CardDescription>Enter your credentials to access your developer console</CardDescription>
+          <CardTitle className="text-xl">Welcome back 👋</CardTitle>
+          <CardDescription>Sign in to your DevSphere developer account</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            {formError && (
+              <Alert type="error" title="Authentication Error">
+                {formError}
+              </Alert>
+            )}
+
             <Input
-              label="Work Email"
+              label="Email Address"
               type="email"
-              placeholder="you@company.com"
+              placeholder="developer@devsphere.io"
               required
+              disabled={isLoading}
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (fieldErrors.email) setFieldErrors((prev) => ({ ...prev, email: undefined }));
+              }}
+              error={fieldErrors.email}
               leftIcon={<Mail className="w-4 h-4" />}
             />
+
             <Input
               label="Password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               placeholder="••••••••••••"
               required
+              disabled={isLoading}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (fieldErrors.password) setFieldErrors((prev) => ({ ...prev, password: undefined }));
+              }}
+              error={fieldErrors.password}
               leftIcon={<Lock className="w-4 h-4" />}
-              helperText="Must be at least 8 characters"
+              rightIcon={
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-slate-400 hover:text-slate-200 focus:outline-none"
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              }
             />
-            <div className="flex items-center justify-between pt-1">
-              <Checkbox
-                label="Remember session"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-              />
+
+            <div className="flex items-center justify-between pt-1 text-xs">
+              <span className="text-slate-400">Restricted session access</span>
               <button
                 type="button"
-                onClick={() => showToast('Password reset link sent to registered email', 'info')}
-                className="text-xs text-brand-400 hover:underline font-medium"
+                onClick={() =>
+                  showToast(
+                    'Password recovery API is intentionally deferred in backend architecture',
+                    'info',
+                    'Notice'
+                  )
+                }
+                className="text-brand-400 hover:underline font-medium"
               >
                 Forgot password?
               </button>
             </div>
+
             <Button
               type="submit"
               variant="primary"
               className="w-full mt-2"
               isLoading={isLoading}
+              disabled={isLoading}
               rightIcon={<ArrowRight className="w-4 h-4" />}
             >
               Sign In

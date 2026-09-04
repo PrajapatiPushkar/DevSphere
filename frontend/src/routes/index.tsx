@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { AppLayout } from '../components/layout/AppLayout';
+import { ProtectedRoute } from '../components/layout/ProtectedRoute';
 import { LandingPage } from '../pages/LandingPage';
 import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
@@ -12,54 +13,66 @@ export const AppRoutes: React.FC = () => {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      
-      {/* Dashboard Routes wrapped in AppLayout */}
+
+      {/* Protected Console Routes wrapped in ProtectedRoute & AppLayout */}
       <Route
         path="/dashboard"
         element={
-          <AppLayout>
-            <DashboardPage />
-          </AppLayout>
+          <ProtectedRoute>
+            <AppLayout>
+              <DashboardPage />
+            </AppLayout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/tasks"
         element={
-          <AppLayout>
-            <DashboardPage />
-          </AppLayout>
+          <ProtectedRoute>
+            <AppLayout>
+              <DashboardPage />
+            </AppLayout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/resumes"
         element={
-          <AppLayout>
-            <DashboardPage />
-          </AppLayout>
+          <ProtectedRoute>
+            <AppLayout>
+              <DashboardPage />
+            </AppLayout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/observability"
         element={
-          <AppLayout>
-            <DashboardPage />
-          </AppLayout>
+          <ProtectedRoute>
+            <AppLayout>
+              <DashboardPage />
+            </AppLayout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/settings"
         element={
-          <AppLayout>
-            <DashboardPage />
-          </AppLayout>
+          <ProtectedRoute>
+            <AppLayout>
+              <DashboardPage />
+            </AppLayout>
+          </ProtectedRoute>
         }
       />
       <Route
         path="/api-docs"
         element={
-          <AppLayout>
-            <DashboardPage />
-          </AppLayout>
+          <ProtectedRoute>
+            <AppLayout>
+              <DashboardPage />
+            </AppLayout>
+          </ProtectedRoute>
         }
       />
     </Routes>

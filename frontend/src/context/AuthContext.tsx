@@ -1,12 +1,14 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { User, AuthState } from '../types';
+import { authService } from '../services/authService';
 
 interface AuthContextType extends AuthState {
   login: (token: string, user: User) => void;
   logout: () => void;
+  checkAuth: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AuthState>({
@@ -16,17 +18,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading: true,
   });
 
-  useEffect(() => {
+  const checkAuth = useCallback(async () => {
     const savedToken = localStorage.getItem('devsphere_token');
-    if (savedToken) {
-      // Stub session initialization for foundation
+    if (!savedToken) {
       setState({
-        user: { id: 1, email: 'developer@devsphere.io', displayName: 'DevSphere Engineer', role: 'ADMIN' },
+        user: null,
+        token: null,
+        isAuthenticated: false,
+        isLoading: false,
+      });
+      return;
+    }
+
+    try {
+      const userProfile = await authService.getCurrentUser();
+      setState({
+        user: userProfile,
         token: savedToken,
         isAuthenticated: true,
         isLoading: false,
       });
-    } else {
+    } catch {
+      localStorage.removeItem('devsphere_token');
       setState({
         user: null,
         token: null,
@@ -35,6 +48,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
     }
   }, []);
+
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
 
   const login = (token: string, user: User) => {
     localStorage.setItem('devsphere_token', token);
@@ -57,7 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, login, logout }}>
+    <AuthContext.Provider value={{ ...state, login, logout, checkAuth }}>
       {children}
     </AuthContext.Provider>
   );

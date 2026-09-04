@@ -9,25 +9,28 @@ export interface LoginCredentials {
 export interface RegisterCredentials {
   email: string;
   password?: string;
-  firstName?: string;
-  lastName?: string;
 }
 
-export interface AuthResponse {
+export interface LoginResponse {
   accessToken: string;
-  tokenType?: string;
-  expiresIn?: number;
-  user?: User;
+  tokenType: string;
+  expiresIn: number;
+}
+
+export interface RegisterResponse {
+  id: number;
+  email: string;
+  createdAt: string;
 }
 
 export const authService = {
-  async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>('/api/v1/auth/login', credentials);
+  async login(credentials: LoginCredentials): Promise<LoginResponse> {
+    const response = await apiClient.post<LoginResponse>('/api/v1/auth/login', credentials);
     return response.data;
   },
 
-  async register(credentials: RegisterCredentials): Promise<AuthResponse> {
-    const response = await apiClient.post<AuthResponse>('/api/v1/auth/register', credentials);
+  async register(credentials: RegisterCredentials): Promise<RegisterResponse> {
+    const response = await apiClient.post<RegisterResponse>('/api/v1/auth/register', credentials);
     return response.data;
   },
 
