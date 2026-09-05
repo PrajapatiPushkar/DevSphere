@@ -1,5 +1,5 @@
 import { apiClient } from './apiClient';
-import { Task, CreateTaskInput, PageResponse, TaskStatus, TaskPriority } from '../types';
+import { Task, CreateTaskInput, UpdateTaskInput, PageResponse, TaskStatus, TaskPriority } from '../types';
 
 export interface TaskQueryParams {
   status?: TaskStatus;
@@ -26,6 +26,11 @@ export const taskService = {
     return response.data;
   },
 
+  async updateTask(id: number, data: UpdateTaskInput): Promise<Task> {
+    const response = await apiClient.put<Task>(`/api/v1/tasks/${id}`, data);
+    return response.data;
+  },
+
   async completeTask(id: number): Promise<Task> {
     const response = await apiClient.patch<Task>(`/api/v1/tasks/${id}/complete`);
     return response.data;
@@ -41,7 +46,13 @@ export const taskService = {
     return response.data;
   },
 
+  async cancelTask(id: number): Promise<Task> {
+    const response = await apiClient.patch<Task>(`/api/v1/tasks/${id}/cancel`);
+    return response.data;
+  },
+
   async deleteTask(id: number): Promise<void> {
     await apiClient.delete(`/api/v1/tasks/${id}`);
   },
 };
+

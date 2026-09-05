@@ -64,6 +64,14 @@ export interface CreateTaskInput {
   goalId?: number;
 }
 
+export interface UpdateTaskInput {
+  title: string;
+  description?: string;
+  priority: TaskPriority;
+  dueDate?: string;
+  goalId?: number;
+}
+
 export interface PageResponse<T> {
   content: T[];
   pageNumber: number;

@@ -6,6 +6,7 @@ import { LandingPage } from '../pages/LandingPage';
 import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { DashboardPage } from '../pages/DashboardPage';
+import { TasksPage } from '../pages/TasksPage';
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -30,7 +31,7 @@ export const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <AppLayout>
-              <DashboardPage />
+              <TasksPage />
             </AppLayout>
           </ProtectedRoute>
         }
