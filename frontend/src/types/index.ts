@@ -1,9 +1,17 @@
 export interface User {
-  id: number | string;
-  email: string;
+  id?: number | string;
+  userId?: number | string;
+  email?: string;
   firstName?: string;
   lastName?: string;
   displayName?: string;
+  headline?: string;
+  bio?: string;
+  location?: string;
+  currentRole?: string;
+  yearsOfExperience?: number;
+  githubUrl?: string;
+  linkedinUrl?: string;
   role?: string;
 }
 
@@ -31,11 +39,54 @@ export interface ToastMessage {
   duration?: number;
 }
 
+export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'ARCHIVED';
+export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+
+export interface Task {
+  id: number;
+  goalId?: number | null;
+  title: string;
+  description?: string | null;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate?: string | null;
+  completedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+  overdue?: boolean;
+}
+
+export interface CreateTaskInput {
+  title: string;
+  description?: string;
+  priority: TaskPriority;
+  dueDate?: string;
+  goalId?: number;
+}
+
+export interface PageResponse<T> {
+  content: T[];
+  pageNumber: number;
+  pageSize: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
+}
+
+export interface DashboardStats {
+  total: number;
+  pending: number;
+  completed: number;
+  overdue: number;
+  completionPercentage: number;
+}
+
 export interface TaskSummary {
   id: number;
   title: string;
-  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  status: 'TODO' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  priority: TaskPriority;
+  status: TaskStatus;
   dueDate?: string;
 }
 
@@ -45,3 +96,4 @@ export interface SystemMetricSummary {
   change: string;
   trend: 'up' | 'down' | 'neutral';
 }
+
