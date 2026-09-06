@@ -9,6 +9,7 @@ import { DashboardPage } from '../pages/DashboardPage';
 import { TasksPage } from '../pages/TasksPage';
 import { ProfilePage } from '../pages/ProfilePage';
 import { SettingsPage } from '../pages/SettingsPage';
+import { ActivityPage } from '../pages/ActivityPage';
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -44,6 +45,16 @@ export const AppRoutes: React.FC = () => {
           <ProtectedRoute>
             <AppLayout>
               <ProfilePage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/activity"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <ActivityPage />
             </AppLayout>
           </ProtectedRoute>
         }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { cn } from '../../utils/cn';
-import { LayoutDashboard, CheckSquare, FileText, Activity, Settings, Code, Sparkles, X, User as UserIcon } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, FileText, Activity, Settings, Code, Sparkles, X, User as UserIcon, History } from 'lucide-react';
 
 export interface SidebarProps {
   isOpen: boolean;
@@ -13,6 +13,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
     { label: 'Overview', to: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
     { label: 'Task Management', to: '/tasks', icon: <CheckSquare className="w-4 h-4" />, badge: 'Lesson 72' },
     { label: 'Developer Profile', to: '/profile', icon: <UserIcon className="w-4 h-4" />, badge: 'Lesson 75' },
+    { label: 'Activity Timeline', to: '/activity', icon: <History className="w-4 h-4" />, badge: 'Lesson 76' },
     { label: 'Resume Compiler', to: '/resumes', icon: <FileText className="w-4 h-4" />, badge: 'Lesson 74' },
     { label: 'Observability', to: '/observability', icon: <Activity className="w-4 h-4" />, badge: 'Prometheus' },
     { label: 'API Playground', to: '/api-docs', icon: <Code className="w-4 h-4" /> },

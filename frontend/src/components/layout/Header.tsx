@@ -4,8 +4,9 @@ import { useToast } from '../../context/ToastContext';
 import { Button } from '../ui/Button';
 import { Dropdown } from '../ui/Dropdown';
 import { Badge } from '../ui/Badge';
-import { Menu, Bell, User as UserIcon, LogOut, Terminal, ExternalLink } from 'lucide-react';
+import { Menu, User as UserIcon, LogOut, Terminal } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { NotificationBell } from '../notifications/NotificationBell';
 
 export interface HeaderProps {
   onToggleSidebar: () => void;
@@ -65,13 +66,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
           Cluster Operational
         </Badge>
 
-        <button
-          onClick={() => showToast('No new notifications', 'info')}
-          className="p-2 rounded-xl text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition relative"
-        >
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-brand-500 rounded-full" />
-        </button>
+        <NotificationBell />
 
         {isAuthenticated ? (
           <Dropdown
