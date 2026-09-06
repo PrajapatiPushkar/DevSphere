@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { ToastMessage, ToastType } from '../types';
+import { ToastContainer } from '../components/common/Toast';
 
 interface ToastContextType {
   toasts: ToastMessage[];
@@ -35,6 +36,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <ToastContext.Provider value={{ toasts, showToast, removeToast }}>
       {children}
+      <ToastContainer />
     </ToastContext.Provider>
   );
 };

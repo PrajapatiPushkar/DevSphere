@@ -8,11 +8,37 @@ export interface User {
   headline?: string;
   bio?: string;
   location?: string;
+  phoneNumber?: string;
   currentRole?: string;
   yearsOfExperience?: number;
   githubUrl?: string;
   linkedinUrl?: string;
+  portfolioUrl?: string;
   role?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface UpdateUserProfileInput {
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  headline?: string;
+  bio?: string;
+  location?: string;
+  phoneNumber?: string;
+  githubUrl?: string;
+  linkedinUrl?: string;
+  portfolioUrl?: string;
+  currentRole?: string;
+  yearsOfExperience?: number;
+}
+
+export interface UserPreferences {
+  theme: 'dark' | 'light' | 'system';
+  compactView: boolean;
+  emailNotifications: boolean;
+  defaultPageSize: number;
 }
 
 export interface AuthState {

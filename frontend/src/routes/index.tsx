@@ -7,6 +7,8 @@ import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
 import { DashboardPage } from '../pages/DashboardPage';
 import { TasksPage } from '../pages/TasksPage';
+import { ProfilePage } from '../pages/ProfilePage';
+import { SettingsPage } from '../pages/SettingsPage';
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -37,6 +39,16 @@ export const AppRoutes: React.FC = () => {
         }
       />
       <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <ProfilePage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/resumes"
         element={
           <ProtectedRoute>
@@ -61,7 +73,7 @@ export const AppRoutes: React.FC = () => {
         element={
           <ProtectedRoute>
             <AppLayout>
-              <DashboardPage />
+              <SettingsPage />
             </AppLayout>
           </ProtectedRoute>
         }

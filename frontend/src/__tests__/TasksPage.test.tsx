@@ -70,6 +70,7 @@ const renderWithProviders = (ui: React.ReactNode) => {
           login: vi.fn(),
           logout: vi.fn(),
           checkAuth: vi.fn(),
+          updateUser: vi.fn(),
         }}
       >
         <ToastProvider>{ui}</ToastProvider>

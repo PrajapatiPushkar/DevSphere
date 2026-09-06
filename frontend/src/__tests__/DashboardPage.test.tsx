@@ -68,6 +68,7 @@ const renderWithProviders = (ui: React.ReactNode, authUser: User | null = mockUs
           login: vi.fn(),
           logout: vi.fn(),
           checkAuth: vi.fn(),
+          updateUser: vi.fn(),
         }}
       >
         <ToastProvider>{ui}</ToastProvider>

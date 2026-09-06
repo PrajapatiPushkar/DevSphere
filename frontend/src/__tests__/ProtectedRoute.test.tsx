@@ -15,6 +15,7 @@ describe('ProtectedRoute', () => {
       login: () => {},
       logout: () => {},
       checkAuth: async () => {},
+      updateUser: () => {},
     };
 
     render(
@@ -46,6 +47,7 @@ describe('ProtectedRoute', () => {
       login: () => {},
       logout: () => {},
       checkAuth: async () => {},
+      updateUser: () => {},
     };
 
     render(

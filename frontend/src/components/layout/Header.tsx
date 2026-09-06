@@ -5,7 +5,7 @@ import { Button } from '../ui/Button';
 import { Dropdown } from '../ui/Dropdown';
 import { Badge } from '../ui/Badge';
 import { Menu, Bell, User as UserIcon, LogOut, Terminal, ExternalLink } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 export interface HeaderProps {
   onToggleSidebar: () => void;
@@ -14,13 +14,14 @@ export interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const { user, isAuthenticated, logout } = useAuth();
   const { showToast } = useToast();
+  const navigate = useNavigate();
 
   const userMenuItems = [
     {
       id: 'profile',
       label: 'Developer Profile',
       icon: <UserIcon className="w-4 h-4 text-slate-400" />,
-      onClick: () => showToast('Profile details available in upcoming module', 'info'),
+      onClick: () => navigate('/profile'),
     },
     {
       id: 'logout',
