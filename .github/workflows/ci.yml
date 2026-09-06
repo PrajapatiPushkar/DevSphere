@@ -111,6 +111,41 @@ jobs:
           path: services/${{ matrix.service }}/target/*.jar
           retention-days: 7
 
+  frontend-build-and-test:
+    name: Build & Test Frontend
+    runs-on: ubuntu-latest
+    needs: repository-security-check
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20 with npm Cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package-lock.json'
+
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+
+      - name: Lint / Type Check
+        run: |
+          cd frontend
+          npm run lint
+
+      - name: Run Unit & Integration Tests
+        run: |
+          cd frontend
+          npm test
+
+      - name: Production Build
+        run: |
+          cd frontend
+          npm run build
+
   dependency-security-scan:
     name: Dependency Vulnerability Audit
     runs-on: ubuntu-latest
@@ -139,7 +174,7 @@ jobs:
   docker-build-validation:
     name: Docker Build Validation (${{ matrix.service }})
     runs-on: ubuntu-latest
-    needs: service-build-and-test
+    needs: [service-build-and-test, frontend-build-and-test]
     strategy:
       fail-fast: false
       matrix:
@@ -163,3 +198,12 @@ jobs:
           file: ./services/${{ matrix.service }}/Dockerfile
           push: false
           tags: devsphere/${{ matrix.service }}:${{ github.sha }}
+
+      - name: Build Frontend Docker Image (Validation Only - No Push)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: false
+          tags: devsphere/frontend:${{ github.sha }}
+

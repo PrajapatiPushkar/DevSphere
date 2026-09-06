@@ -105,10 +105,77 @@ jobs:
           path: metadata/${{ matrix.service }}.json
           retention-days: 7
 
+  publish-frontend-container-image:
+    name: Build & Publish Container Image (frontend)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Lowercase Repository Owner & Image Name
+        id: image_info
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE_NAME="ghcr.io/${OWNER}/devsphere-frontend"
+          echo "image_name=${IMAGE_NAME}" >> $GITHUB_OUTPUT
+
+      - name: Extract Docker Metadata (Tags & OCI Labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.image_info.outputs.image_name }}
+          tags: |
+            type=sha,prefix=sha-,format=short
+            type=raw,value=${{ github.sha }}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=ref,event=branch
+
+      - name: Build and Push Docker Image to GHCR
+        id: build_push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: true
+          sbom: true
+
+      - name: Record Image Digest Metadata
+        run: |
+          mkdir -p metadata/
+          cat <<EOF > metadata/frontend.json
+          {
+            "service": "frontend",
+            "image": "${{ steps.image_info.outputs.image_name }}",
+            "tag": "${{ github.sha }}",
+            "digest": "${{ steps.build_push.outputs.digest }}"
+          }
+          EOF
+
+      - name: Upload Frontend Image Metadata Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-metadata-frontend
+          path: metadata/frontend.json
+          retention-days: 7
+
   generate-release-manifest:
     name: Generate Deployment Release Manifest
     runs-on: ubuntu-latest
-    needs: publish-container-images
+    needs: [publish-container-images, publish-frontend-container-image]
     steps:
       - name: Download All Image Metadata Artifacts
         uses: actions/download-artifact@v4
@@ -157,7 +224,7 @@ jobs:
   deploy-to-kubernetes:
     name: Continuous Deployment to Kubernetes
     runs-on: ubuntu-latest
-    needs: [publish-container-images, generate-release-manifest]
+    needs: [publish-container-images, publish-frontend-container-image, generate-release-manifest]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -183,6 +250,7 @@ jobs:
           kustomize edit set image ghcr.io/prajapatipushkar/devsphere-user-service=ghcr.io/${OWNER}/devsphere-user-service:${COMMIT_SHA}
           kustomize edit set image ghcr.io/prajapatipushkar/devsphere-config-server=ghcr.io/${OWNER}/devsphere-config-server:${COMMIT_SHA}
           kustomize edit set image ghcr.io/prajapatipushkar/devsphere-service-discovery=ghcr.io/${OWNER}/devsphere-service-discovery:${COMMIT_SHA}
+          kustomize edit set image ghcr.io/prajapatipushkar/devsphere-frontend=ghcr.io/${OWNER}/devsphere-frontend:${COMMIT_SHA}
 
       - name: Validate Synthesized Manifests
         run: |
@@ -214,4 +282,5 @@ jobs:
           kubectl rollout status deployment/auth-service -n devsphere --timeout=180s
           kubectl rollout status deployment/user-service -n devsphere --timeout=180s
           kubectl rollout status deployment/api-gateway -n devsphere --timeout=180s
-          echo "PASSED: All microservices successfully deployed and verified!"
+          kubectl rollout status deployment/devsphere-frontend -n devsphere --timeout=180s
+          echo "PASSED: All microservices and frontend successfully deployed and verified!"

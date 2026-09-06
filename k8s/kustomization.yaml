@@ -15,6 +15,7 @@ resources:
   - services/api-gateway.yaml
   - services/auth-service.yaml
   - services/user-service.yaml
+  - services/frontend.yaml
   - autoscaling/hpa.yaml
   - disruption/pdb.yaml
   - networking/nodeport-gateway.yaml
