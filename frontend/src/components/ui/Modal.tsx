@@ -48,33 +48,47 @@ export const Modal: React.FC<ModalProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
+        className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm transition-opacity animate-in fade-in duration-150"
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Modal Container */}
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? 'modal-title' : undefined}
+        aria-describedby={description ? 'modal-description' : undefined}
         className={cn(
-          'relative w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-200',
+          'relative w-full bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-10 animate-in zoom-in-95 duration-150',
           maxWidths[maxWidth]
         )}
       >
         {/* Header */}
         <div className="px-6 py-5 border-b border-slate-800 flex items-center justify-between">
           <div>
-            {title && <h3 className="text-lg font-semibold text-slate-100">{title}</h3>}
-            {description && <p className="text-xs text-slate-400 mt-1">{description}</p>}
+            {title && (
+              <h3 id="modal-title" className="text-lg font-semibold text-slate-100 tracking-tight">
+                {title}
+              </h3>
+            )}
+            {description && (
+              <p id="modal-description" className="text-xs text-slate-400 mt-1">
+                {description}
+              </p>
+            )}
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-800 transition"
+            aria-label="Close dialog"
+            className="text-slate-400 hover:text-slate-200 p-1.5 rounded-lg hover:bg-slate-800 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/50"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 max-h-[75vh] overflow-y-auto">{children}</div>
+        <div className="p-6 max-h-[75vh] overflow-y-auto text-slate-200">{children}</div>
 
         {/* Footer */}
         {footer && <div className="px-6 py-4 bg-slate-950/50 border-t border-slate-800 flex justify-end gap-3">{footer}</div>}

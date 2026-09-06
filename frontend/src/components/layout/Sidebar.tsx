@@ -9,6 +9,20 @@ export interface SidebarProps {
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   const navItems = [
     { label: 'Overview', to: '/dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
     { label: 'Task Management', to: '/tasks', icon: <CheckSquare className="w-4 h-4" />, badge: 'Lesson 72' },
@@ -25,13 +39,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       {/* Mobile Backdrop Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm lg:hidden transition-opacity animate-in fade-in duration-150"
           onClick={onClose}
+          aria-hidden="true"
         />
       )}
 
       {/* Sidebar Container */}
       <aside
+        aria-label="Sidebar navigation"
         className={cn(
           'fixed lg:static top-16 bottom-0 left-0 z-40 w-64 bg-slate-950 border-r border-slate-800/80 flex flex-col justify-between transition-transform duration-200 ease-in-out',
           isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'

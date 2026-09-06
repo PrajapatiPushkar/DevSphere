@@ -92,7 +92,7 @@ export const NotificationBell: React.FC = () => {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-12 z-50">
+        <div className="fixed sm:absolute top-16 sm:top-12 left-4 sm:left-auto right-4 sm:right-0 z-50 max-w-[calc(100vw-2rem)] sm:max-w-none">
           <NotificationPanel
             notifications={notifications}
             isLoading={isLoading}

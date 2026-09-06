@@ -33,7 +33,7 @@ export const SettingsLayout: React.FC<SettingsLayoutProps> = ({
               key={tab.id}
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                'flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-150 text-left w-full',
+                'flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold whitespace-nowrap transition-all duration-150 text-left shrink-0 w-auto lg:w-full',
                 isActive
                   ? 'bg-brand-600/15 text-brand-400 border border-brand-500/30 shadow-sm'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 border border-transparent'
