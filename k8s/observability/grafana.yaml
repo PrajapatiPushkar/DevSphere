@@ -14,7 +14,7 @@ data:
       - name: Prometheus
         type: prometheus
         access: proxy
-        url: http://prometheus:9090
+        url: http://prometheus.devsphere.svc.cluster.local:9090
         isDefault: true
         editable: false
 ---
@@ -38,7 +38,7 @@ data:
         disableDeletion: false
         editable: true
         options:
-          path: /var/lib/grafana/dashboards
+          path: /etc/grafana/dashboards
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -63,42 +63,20 @@ data:
       "liveNow": false,
       "panels": [
         {
-          "title": "HTTP Request Rate (ops/sec)",
-          "type": "timeseries",
-          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
-          "targets": [
-            {
-              "expr": "sum(rate(http_server_requests_seconds_count[5m])) by (job)",
-              "legendFormat": "{{job}}"
-            }
-          ]
-        },
-        {
-          "title": "HTTP 5xx Error Rate",
-          "type": "timeseries",
-          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
-          "targets": [
-            {
-              "expr": "sum(rate(http_server_requests_seconds_count{status=~\"5..\"}[5m])) by (job)",
-              "legendFormat": "{{job}} errors"
-            }
-          ]
-        },
-        {
-          "title": "P95 Request Latency (seconds)",
-          "type": "timeseries",
-          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
-          "targets": [
-            {
-              "expr": "histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket[5m])) by (le, job))",
-              "legendFormat": "{{job}} p95"
-            }
-          ]
-        },
-        {
-          "title": "Active Requests",
+          "title": "Service Target Status (UP)",
           "type": "stat",
-          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0},
+          "targets": [
+            {
+              "expr": "count(up{job=~\"api-gateway|auth-service|user-service|config-server|service-discovery\"} == 1)",
+              "legendFormat": "Healthy Services"
+            }
+          ]
+        },
+        {
+          "title": "Active In-Flight Requests",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0},
           "targets": [
             {
               "expr": "sum(http_server_requests_active_seconds_count) by (job)",
@@ -107,9 +85,75 @@ data:
           ]
         },
         {
+          "title": "Total HTTP Request Rate (ops/sec)",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 12, "y": 0},
+          "targets": [
+            {
+              "expr": "sum(rate(http_server_requests_seconds_count[1m]))",
+              "legendFormat": "Global Rate"
+            }
+          ]
+        },
+        {
+          "title": "Service Availability Matrix",
+          "type": "stat",
+          "gridPos": {"h": 4, "w": 6, "x": 18, "y": 0},
+          "targets": [
+            {
+              "expr": "up{job=~\"api-gateway|auth-service|user-service|config-server|service-discovery\"}",
+              "legendFormat": "{{job}}"
+            }
+          ]
+        },
+        {
+          "title": "HTTP Request Rate by Service (ops/sec)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+          "targets": [
+            {
+              "expr": "sum(rate(http_server_requests_seconds_count[1m])) by (job)",
+              "legendFormat": "{{job}}"
+            }
+          ]
+        },
+        {
+          "title": "HTTP 5xx Server Error Rate",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+          "targets": [
+            {
+              "expr": "sum(rate(http_server_requests_seconds_count{status=~\"5..\"}[1m])) by (job)",
+              "legendFormat": "{{job}} 5xx"
+            }
+          ]
+        },
+        {
+          "title": "Average Request Latency (seconds)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12},
+          "targets": [
+            {
+              "expr": "sum(rate(http_server_requests_seconds_sum[1m])) by (job) / sum(rate(http_server_requests_seconds_count[1m])) by (job)",
+              "legendFormat": "{{job}} avg"
+            }
+          ]
+        },
+        {
+          "title": "Peak Request Latency (seconds)",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 12},
+          "targets": [
+            {
+              "expr": "max(http_server_requests_seconds_max) by (job)",
+              "legendFormat": "{{job}} max"
+            }
+          ]
+        },
+        {
           "title": "JVM Heap Memory Usage (bytes)",
           "type": "timeseries",
-          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20},
           "targets": [
             {
               "expr": "jvm_memory_used_bytes{area=\"heap\"}",
@@ -122,43 +166,46 @@ data:
           ]
         },
         {
-          "title": "JVM Live Thread Count",
+          "title": "JVM Non-Heap Memory Usage (bytes)",
           "type": "timeseries",
-          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20},
+          "targets": [
+            {
+              "expr": "jvm_memory_used_bytes{area=\"nonheap\"}",
+              "legendFormat": "{{job}} non-heap"
+            }
+          ]
+        },
+        {
+          "title": "JVM Live Threads",
+          "type": "timeseries",
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 28},
           "targets": [
             {
               "expr": "jvm_threads_live_threads",
-              "legendFormat": "{{job}}"
+              "legendFormat": "{{job}} threads"
             }
           ]
         },
         {
-          "title": "Kafka Events Processed & Errors",
+          "title": "Process CPU Usage",
           "type": "timeseries",
-          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 24},
+          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 28},
           "targets": [
             {
-              "expr": "sum(rate(devsphere_kafka_events_processed_total[5m])) by (event_type, status)",
-              "legendFormat": "{{event_type}} - {{status}}"
-            },
-            {
-              "expr": "sum(rate(devsphere_kafka_duplicate_events_total[5m])) by (event_type)",
-              "legendFormat": "{{event_type}} duplicate"
+              "expr": "process_cpu_usage",
+              "legendFormat": "{{job}} cpu"
             }
           ]
         },
         {
-          "title": "Redis Cache Performance (Hits vs Misses)",
+          "title": "Kafka Consumer Partition Lag (Records)",
           "type": "timeseries",
-          "gridPos": {"h": 8, "w": 12, "x": 12, "y": 24},
+          "gridPos": {"h": 8, "w": 24, "x": 0, "y": 36},
           "targets": [
             {
-              "expr": "sum(rate(devsphere_cache_hits_total[5m])) by (cache)",
-              "legendFormat": "{{cache}} hits"
-            },
-            {
-              "expr": "sum(rate(devsphere_cache_misses_total[5m])) by (cache)",
-              "legendFormat": "{{cache}} misses"
+              "expr": "kafka_consumer_fetch_manager_records_lag_max",
+              "legendFormat": "{{client_id}} - {{topic}}"
             }
           ]
         }
@@ -220,11 +267,11 @@ spec:
                 - ALL
           resources:
             requests:
-              cpu: "250m"
-              memory: "256Mi"
+              cpu: "50m"
+              memory: "100Mi"
             limits:
-              cpu: "500m"
-              memory: "512Mi"
+              cpu: "250m"
+              memory: "200Mi"
           env:
             - name: GF_SECURITY_ADMIN_USER
               value: "admin"
@@ -256,7 +303,7 @@ spec:
             - name: provider-volume
               mountPath: /etc/grafana/provisioning/dashboards
             - name: dashboards-volume
-              mountPath: /var/lib/grafana/dashboards
+              mountPath: /etc/grafana/dashboards
             - name: storage-volume
               mountPath: /var/lib/grafana
       volumes:
