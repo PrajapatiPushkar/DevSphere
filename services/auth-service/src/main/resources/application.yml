@@ -1,8 +1,8 @@
 spring:
   application:
-    name: DEVSPHERE-AUTH-SERVICE
+    name: auth-service
   config:
-    import: optional:configserver:http://localhost:8888
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
 
   datasource:
     username: ${DB_USERNAME:root}

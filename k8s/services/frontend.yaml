@@ -8,12 +8,13 @@ metadata:
     app.kubernetes.io/component: frontend
     app.kubernetes.io/part-of: devsphere
 spec:
-  replicas: 2
+  # Local Kind resource constraint; production HA configuration remains a later production concern.
+  replicas: 1
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
+      maxUnavailable: 1
+      maxSurge: 0
   selector:
     matchLabels:
       app.kubernetes.io/name: devsphere-frontend
@@ -40,6 +41,13 @@ spec:
           labelSelector:
             matchLabels:
               app.kubernetes.io/name: devsphere-frontend
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: devsphere-frontend
           image: ghcr.io/prajapatipushkar/devsphere-frontend:latest
@@ -47,13 +55,25 @@ spec:
           ports:
             - containerPort: 80
               name: http
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           resources:
             requests:
               cpu: "100m"
-              memory: "128Mi"
+              memory: "64Mi"
             limits:
               cpu: "500m"
-              memory: "256Mi"
+              memory: "128Mi"
+          volumeMounts:
+            - name: tmp-volume
+              mountPath: /tmp
+            - name: cache-volume
+              mountPath: /var/cache/nginx
+            - name: run-volume
+              mountPath: /var/run
           livenessProbe:
             httpGet:
               path: /
@@ -70,6 +90,13 @@ spec:
             periodSeconds: 5
             timeoutSeconds: 3
             failureThreshold: 3
+      volumes:
+        - name: tmp-volume
+          emptyDir: {}
+        - name: cache-volume
+          emptyDir: {}
+        - name: run-volume
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

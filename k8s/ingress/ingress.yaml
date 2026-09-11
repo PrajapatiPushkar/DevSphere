@@ -8,8 +8,14 @@ metadata:
     app.kubernetes.io/part-of: devsphere
   annotations:
     kubernetes.io/ingress.class: nginx
-    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
 spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - app.devsphere.local
+        - api.devsphere.local
+      secretName: devsphere-tls
   rules:
     - host: app.devsphere.local
       http:

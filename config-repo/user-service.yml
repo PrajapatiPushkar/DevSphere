@@ -22,7 +22,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: none
     show-sql: false
     properties:
       hibernate:
@@ -99,7 +99,6 @@ resilience4j:
         ignoreExceptions:
           - com.devsphere.user.exception.ResourceNotFoundException
           - com.devsphere.user.exception.UnauthorizedException
-          - com.devsphere.user.exception.ForbiddenException
           - java.lang.IllegalArgumentException
     instances:
       userServiceCircuitBreaker:
@@ -119,7 +118,6 @@ resilience4j:
         ignoreExceptions:
           - com.devsphere.user.exception.ResourceNotFoundException
           - com.devsphere.user.exception.UnauthorizedException
-          - com.devsphere.user.exception.ForbiddenException
           - java.lang.IllegalArgumentException
     instances:
       userServiceRetry:

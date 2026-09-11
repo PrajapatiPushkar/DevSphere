@@ -8,12 +8,12 @@ metadata:
     app.kubernetes.io/component: auth-service
     app.kubernetes.io/part-of: devsphere
 spec:
-  replicas: 2
+  replicas: 1
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
+      maxUnavailable: 1
+      maxSurge: 0
   selector:
     matchLabels:
       app.kubernetes.io/name: auth-service
@@ -63,10 +63,10 @@ spec:
           resources:
             requests:
               cpu: "250m"
-              memory: "512Mi"
+              memory: "384Mi"
             limits:
               cpu: "1000m"
-              memory: "1Gi"
+              memory: "768Mi"
           envFrom:
             - configMapRef:
                 name: devsphere-configmap

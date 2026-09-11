@@ -1,8 +1,8 @@
 spring:
   application:
-    name: DEVSPHERE-API-GATEWAY
+    name: api-gateway
   config:
-    import: optional:configserver:http://localhost:8888
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
 
 jwt:
   secret: ${JWT_SECRET:devsphere-super-secret-jwt-signing-key-for-local-development-must-be-at-least-256-bits-long}

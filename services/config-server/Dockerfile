@@ -18,6 +18,7 @@ RUN addgroup -S devsphere && adduser -S devsphere -G devsphere
 
 # Copy built jar from builder stage
 COPY --from=builder /build/target/*.jar app.jar
+COPY config-repo /app/config-repo
 
 # Set ownership to non-root user
 RUN chown -R devsphere:devsphere /app

@@ -9,6 +9,11 @@ metadata:
     app.kubernetes.io/part-of: devsphere
 spec:
   replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
   selector:
     matchLabels:
       app.kubernetes.io/name: devsphere-zookeeper
@@ -38,6 +43,8 @@ spec:
             - containerPort: 2181
               name: zookeeper
           env:
+            - name: KAFKA_HEAP_OPTS
+              value: "-Xmx128M -Xms128M"
             - name: ZOOKEEPER_CLIENT_PORT
               value: "2181"
             - name: ZOOKEEPER_TICK_TIME
@@ -45,10 +52,10 @@ spec:
           resources:
             requests:
               cpu: "100m"
-              memory: "256Mi"
+              memory: "128Mi"
             limits:
               cpu: "500m"
-              memory: "512Mi"
+              memory: "256Mi"
           livenessProbe:
             tcpSocket:
               port: 2181
@@ -85,6 +92,11 @@ metadata:
     app.kubernetes.io/part-of: devsphere
 spec:
   replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+      maxSurge: 0
   selector:
     matchLabels:
       app.kubernetes.io/name: devsphere-kafka
@@ -114,6 +126,8 @@ spec:
             - containerPort: 9092
               name: kafka
           env:
+            - name: KAFKA_HEAP_OPTS
+              value: "-Xmx384M -Xms256M"
             - name: KAFKA_BROKER_ID
               value: "1"
             - name: KAFKA_ZOOKEEPER_CONNECT
@@ -129,10 +143,10 @@ spec:
           resources:
             requests:
               cpu: "250m"
-              memory: "512Mi"
+              memory: "384Mi"
             limits:
               cpu: "1000m"
-              memory: "1Gi"
+              memory: "640Mi"
           livenessProbe:
             tcpSocket:
               port: 9092
