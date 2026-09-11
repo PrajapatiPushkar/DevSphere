@@ -150,6 +150,8 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VITE_API_BASE_URL=https://api.devsphere.local
           provenance: true
           sbom: true
 
@@ -273,12 +275,19 @@ jobs:
           echo "$KUBE_CONFIG" | base64 -d > ~/.kube/config || echo "$KUBE_CONFIG" > ~/.kube/config
           chmod 600 ~/.kube/config
 
+          echo "Testing Kubernetes API connectivity..."
+          if ! kubectl cluster-info --request-timeout=10s; then
+            echo "ERROR: Target Kubernetes cluster API is not reachable from this GitHub-hosted runner."
+            echo "Note: Local Kind clusters on developer workstations cannot be reached directly from GitHub runners without a local self-hosted runner or public API endpoint."
+            exit 1
+          fi
+
           echo "Applying Kubernetes manifests via Kustomize..."
           kubectl apply -k k8s/
 
           echo "Verifying rolling deployment status across all microservices..."
-          kubectl rollout status deployment/config-server -n devsphere --timeout=180s
-          kubectl rollout status deployment/service-discovery -n devsphere --timeout=180s
+          kubectl rollout status deployment/devsphere-config-server -n devsphere --timeout=180s
+          kubectl rollout status deployment/devsphere-service-discovery -n devsphere --timeout=180s
           kubectl rollout status deployment/auth-service -n devsphere --timeout=180s
           kubectl rollout status deployment/user-service -n devsphere --timeout=180s
           kubectl rollout status deployment/api-gateway -n devsphere --timeout=180s

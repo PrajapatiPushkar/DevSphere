@@ -3,7 +3,7 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Build-time API base URL configuration for production
-ARG VITE_API_BASE_URL=http://api.devsphere.local
+ARG VITE_API_BASE_URL=https://api.devsphere.local
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 
 # Copy dependency specifications

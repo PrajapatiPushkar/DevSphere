@@ -24,3 +24,17 @@ resources:
   - observability/alerts.yaml
   - observability/prometheus.yaml
   - observability/grafana.yaml
+
+images:
+  - name: ghcr.io/prajapatipushkar/devsphere-api-gateway
+    newTag: latest
+  - name: ghcr.io/prajapatipushkar/devsphere-auth-service
+    newTag: latest
+  - name: ghcr.io/prajapatipushkar/devsphere-user-service
+    newTag: latest
+  - name: ghcr.io/prajapatipushkar/devsphere-config-server
+    newTag: latest
+  - name: ghcr.io/prajapatipushkar/devsphere-service-discovery
+    newTag: latest
+  - name: ghcr.io/prajapatipushkar/devsphere-frontend
+    newTag: latest
